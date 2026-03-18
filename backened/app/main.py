@@ -11,6 +11,7 @@ from app.routes import time_entries
 from app.routes import invoices
 from app.routes import conversations
 from app.routes import messages
+from app.routes import dashboard
 
 app = FastAPI(
     title="Freelancer Work Tracker API",
@@ -56,3 +57,4 @@ app.include_router(time_entries.router)
 app.include_router(invoices.router)
 app.include_router(conversations.router)
 app.include_router(messages.router)
+app.include_router(dashboard.router)

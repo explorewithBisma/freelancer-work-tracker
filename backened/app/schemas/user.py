@@ -1,11 +1,12 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from datetime import datetime
-from pydantic import ConfigDict
+
 
 class UserCreate(BaseModel):
     full_name: str
     email: EmailStr
     password: str
+
 
 class UserOut(BaseModel):
     id: int
