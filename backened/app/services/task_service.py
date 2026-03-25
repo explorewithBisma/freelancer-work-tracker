@@ -28,6 +28,20 @@ def get_tasks(db: Session):
 def get_task(db: Session, task_id: int):
     return db.query(Task).filter(Task.id == task_id).first()
 
+# --- NEW UPDATE FUNCTION ADDED HERE ---
+def update_task_status(db: Session, task_id: int, new_status: str):
+    """
+    Finds the task by ID and updates its status in the database.
+    """
+    task = db.query(Task).filter(Task.id == task_id).first()
+    
+    if task:
+        task.status = new_status
+        db.commit()
+        db.refresh(task)  # This refreshes the object with the new data from the DB
+        
+    return task
+
 
 def delete_task(db: Session, task_id: int):
     task = db.query(Task).filter(Task.id == task_id).first()
