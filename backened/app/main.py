@@ -22,17 +22,19 @@ app = FastAPI(
 # CORS for frontend (React/Vite)
 app.add_middleware(
     CORSMiddleware,
+    # Maine yahan 5173 (Vite) aur 3000 (React default) dono add kar diye hain
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-    
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Logging (optional but professional)
+# Logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("app")
 
@@ -43,18 +45,19 @@ def startup():
 @app.get("/")
 def root():
     return {
-        "message": "Freelancer Work Tracker API is running ",
+        "message": "Freelancer Work Tracker API is running",
         "docs": "http://127.0.0.1:8000/docs",
-        "health": "http://127.0.0.1:8000/health",
     }
 
-app.include_router(health_router)
-app.include_router(auth_router) 
-app.include_router(clients_router)
-app.include_router(projects.router)
-app.include_router(tasks.router)
-app.include_router(time_entries.router)
-app.include_router(invoices.router)
-app.include_router(conversations.router)
-app.include_router(messages.router)
-app.include_router(dashboard.router)
+# --- ROUTES WITH PREFIXES ---
+# Ye prefixes zaroori hain taake React 'http://localhost:8000/tasks' ko hit kar sakay
+app.include_router(health_router, prefix="/health", tags=["Health"])
+app.include_router(auth_router, prefix="/auth", tags=["Auth"]) 
+app.include_router(clients_router, prefix="/clients", tags=["Clients"])
+app.include_router(projects.router, prefix="/projects", tags=["Projects"])
+app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
+app.include_router(time_entries.router, prefix="/time-entries", tags=["Time Entries"])
+app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
+app.include_router(conversations.router, prefix="/conversations", tags=["AI Chat"])
+app.include_router(messages.router, prefix="/messages", tags=["Messages"])
+app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
