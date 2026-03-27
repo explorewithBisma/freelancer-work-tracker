@@ -5,10 +5,12 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.project_schema import ProjectCreate, ProjectResponse
 from app.services.project_service import create_project, get_projects, get_project, delete_project
 
-router = APIRouter(prefix="/projects", tags=["Projects"])
+# FIXED: Removed the prefix="/projects" because it's already in main.py.
+# Using tags helps keep your /docs organized.
+router = APIRouter(tags=["Projects"])
 
-
-@router.post("", response_model=ProjectResponse)
+# Using "/" instead of "" ensures FastAPI handles the trailing slash properly
+@router.post("/", response_model=ProjectResponse)
 def add_project(
     payload: ProjectCreate,
     db: Session = Depends(get_db),
@@ -25,16 +27,14 @@ def add_project(
     )
     return project
 
-
-@router.get("", response_model=list[ProjectResponse])
+@router.get("/", response_model=list[ProjectResponse])
 def read_projects(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
     return get_projects(db, current_user.id)
 
-
-@router.get("/{project_id}", response_model=ProjectResponse)
+@router.get("/{project_id}/", response_model=ProjectResponse)
 def read_project(
     project_id: int,
     db: Session = Depends(get_db),
@@ -47,8 +47,7 @@ def read_project(
 
     return project
 
-
-@router.delete("/{project_id}")
+@router.delete("/{project_id}/")
 def remove_project(
     project_id: int,
     db: Session = Depends(get_db),

@@ -3,12 +3,14 @@ from app.models.task import Task
 
 def create_task(
     db: Session,
+    user_id: int,  # Added: Link task to the logged-in user
     project_id: int,
     title: str,
     description: str = None,
     status: str = "todo"
 ):
     task = Task(
+        user_id=user_id,
         project_id=project_id,
         title=title,
         description=description,
@@ -21,33 +23,36 @@ def create_task(
     return task
 
 
-def get_tasks(db: Session):
-    return db.query(Task).all()
+def get_tasks(db: Session, user_id: int):
+    # FIXED: Now takes 2 arguments and filters by user_id
+    return db.query(Task).filter(Task.user_id == user_id).all()
 
 
-def get_task(db: Session, task_id: int):
-    return db.query(Task).filter(Task.id == task_id).first()
+def get_task(db: Session, task_id: int, user_id: int):
+    # Security: Ensure the task belongs to the user
+    return db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
-# --- NEW UPDATE FUNCTION ADDED HERE ---
-def update_task_status(db: Session, task_id: int, new_status: str):
+
+def update_task_status(db: Session, task_id: int, user_id: int, new_status: str):
     """
-    Finds the task by ID and updates its status in the database.
+    Finds the task by ID and User ID, then updates its status.
     """
-    task = db.query(Task).filter(Task.id == task_id).first()
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
     
     if task:
         task.status = new_status
         db.commit()
-        db.refresh(task)  # This refreshes the object with the new data from the DB
+        db.refresh(task) 
         
     return task
 
 
-def delete_task(db: Session, task_id: int):
-    task = db.query(Task).filter(Task.id == task_id).first()
+def delete_task(db: Session, task_id: int, user_id: int):
+    task = db.query(Task).filter(Task.id == task_id, Task.user_id == user_id).first()
 
     if task:
         db.delete(task)
         db.commit()
-
-    return task
+        return True # Return success
+    
+    return False

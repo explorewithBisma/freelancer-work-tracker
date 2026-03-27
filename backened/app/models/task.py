@@ -5,6 +5,9 @@ class Task(Base):
     __tablename__ = "tasks"
 
     id = Column(Integer, primary_key=True, index=True)
+    # NEW: Linking the task to the User (The Freelancer)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     title = Column(String(180), nullable=False)
     description = Column(Text, nullable=True)
