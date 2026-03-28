@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, DateTime, String, func, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, func
 from app.database import Base
 
 class TimeEntry(Base):
@@ -6,8 +6,10 @@ class TimeEntry(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
-    start_time = Column(DateTime, nullable=False)
-    end_time = Column(DateTime, nullable=True)
-    duration_minutes = Column(Integer, default=0)
+    
+    # These MUST match the arguments we pass in time_entry_service.py
+    duration_seconds = Column(Integer, nullable=False) 
+    date = Column(String(50), nullable=False) # Stores YYYY-MM-DD
+    
     note = Column(String(255), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
