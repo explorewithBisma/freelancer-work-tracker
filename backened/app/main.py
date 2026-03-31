@@ -7,6 +7,7 @@ from app.routes.health import router as health_router
 from app.routes.auth import router as auth_router
 from app.routes.clients import router as clients_router
 from app.routes import projects, tasks, time_entries, invoices, conversations, messages, dashboard
+from app.routes import settings
 
 app = FastAPI(
     title="Freelancer Work Tracker API",
@@ -63,3 +64,4 @@ app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
 app.include_router(conversations.router, prefix="/conversations", tags=["AI Chat"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
+app.include_router(settings.router, prefix="/settings", tags=["Settings"])
