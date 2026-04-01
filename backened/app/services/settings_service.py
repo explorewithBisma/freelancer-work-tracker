@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from passlib.context import CryptContext
 
 from app.models.user import User
@@ -54,13 +55,22 @@ def change_password(db: Session, user_id: int, current_pw: str, new_pw: str, con
 # USER SETTINGS SERVICE
 # ══════════════════════════════════════════
 def get_or_create_settings(db: Session, user_id: int):
+    # Pehle check karo — already exist karta hai?
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
-    if not settings:
+    if settings:
+        return settings
+
+    # Nahi mila — try to create, but race condition se bachao
+    try:
         settings = UserSettings(user_id=user_id)
         db.add(settings)
         db.commit()
         db.refresh(settings)
-    return settings
+        return settings
+    except IntegrityError:
+        # Duplicate entry — doosri request ne pehle insert kar diya
+        db.rollback()
+        return db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
 
 
 def update_settings(db: Session, user_id: int, data: dict):
