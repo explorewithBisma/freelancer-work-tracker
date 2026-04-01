@@ -16,7 +16,6 @@ app = FastAPI(
 )
 
 # --- CORS CONFIGURATION ---
-# Updated to ensure all local development variations are covered
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -50,18 +49,18 @@ def root():
     }
 
 # --- ROUTES REGISTRATION ---
-# NOTE: The prefixes here must match exactly what Axios is calling in React.
 app.include_router(health_router, prefix="/health", tags=["Health"])
-app.include_router(auth_router, prefix="/auth", tags=["Auth"]) 
-app.include_router(clients_router, prefix="/clients", tags=["Clients"])
+app.include_router(auth_router, prefix="/auth", tags=["Auth"])
+# ✅ FIX: clients router mein already prefix="/clients" hai
+app.include_router(clients_router)
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
-
-# This is the line that connects your Stopwatch data to the Database
 app.include_router(time_entries.router, prefix="/time-entries", tags=["Time Entries"])
-
-app.include_router(invoices.router, prefix="/invoices", tags=["Invoices"])
+# ✅ FIX: invoices router mein already prefix="/invoices" hai
+app.include_router(invoices.router)
 app.include_router(conversations.router, prefix="/conversations", tags=["AI Chat"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
-app.include_router(settings.router, prefix="/settings", tags=["Settings"])
+
+# ✅ FIX: prefix hata diya — settings router mein already "/settings" prefix hai
+app.include_router(settings.router)
