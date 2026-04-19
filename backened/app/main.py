@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import logging
 
 # Importing routers
@@ -16,18 +17,34 @@ app = FastAPI(
 )
 
 # --- CORS CONFIGURATION ---
+# ✅ FIX: CORS middleware MUST be added first — before any routes or exception handlers
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ FIX: Custom 500 handler — ensures CORS headers present even on crashes
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    origin = request.headers.get("origin", "http://localhost:3000")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal server error: {str(exc)}"},
+        headers={
+            "Access-Control-Allow-Origin": origin if origin in ALLOWED_ORIGINS else "http://localhost:3000",
+            "Access-Control-Allow-Credentials": "true",
+        }
+    )
 
 # --- LOGGING ---
 logging.basicConfig(
@@ -51,16 +68,12 @@ def root():
 # --- ROUTES REGISTRATION ---
 app.include_router(health_router, prefix="/health", tags=["Health"])
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
-# ✅ FIX: clients router mein already prefix="/clients" hai
 app.include_router(clients_router)
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 app.include_router(time_entries.router, prefix="/time-entries", tags=["Time Entries"])
-# ✅ FIX: invoices router mein already prefix="/invoices" hai
 app.include_router(invoices.router)
 app.include_router(conversations.router, prefix="/conversations", tags=["AI Chat"])
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
-
-# ✅ FIX: prefix hata diya — settings router mein already "/settings" prefix hai
 app.include_router(settings.router)
