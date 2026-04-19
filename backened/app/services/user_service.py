@@ -1,6 +1,9 @@
 from sqlalchemy.orm import Session
 from app.models.user import User
-from app.services.auth_service import hash_password
+from passlib.context import CryptContext
+
+# ✅ FIX: hash_password directly here — removes circular import with auth_service
+_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def get_user_by_email(db: Session, email: str):
@@ -8,7 +11,7 @@ def get_user_by_email(db: Session, email: str):
 
 
 def create_user(db: Session, full_name: str, email: str, password: str):
-    hashed = hash_password(password)
+    hashed = _pwd_context.hash(password)
 
     user = User(
         full_name=full_name,

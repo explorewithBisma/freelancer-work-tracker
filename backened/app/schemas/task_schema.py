@@ -1,23 +1,47 @@
 from pydantic import BaseModel
-from datetime import datetime
 from typing import Optional
+from enum import Enum
 
-# This class MUST be named exactly 'TaskCreate'
+
+class TaskStatus(str, Enum):
+    todo        = "todo"
+    in_progress = "in_progress"
+    done        = "done"
+
+
+class TaskPriority(str, Enum):
+    low    = "low"
+    medium = "medium"
+    high   = "high"
+
+
 class TaskCreate(BaseModel):
-    project_id: int
-    title: str
+    project_id:  int
+    title:       str
     description: Optional[str] = None
-    status: Optional[str] = "todo"
+    status:      TaskStatus    = TaskStatus.todo
+    priority:    TaskPriority  = TaskPriority.medium
 
-# This class MUST be named exactly 'TaskResponse'
-class TaskResponse(BaseModel):
-    id: int
-    project_id: int
-    title: str
+
+class TaskOut(BaseModel):
+    id:          int
+    project_id:  int
+    user_id:     int
+    title:       str
     description: Optional[str] = None
-    status: str
-    created_at: Optional[datetime] = None 
+    status:      str
+    priority:    str = "medium"
 
     class Config:
-        from_attributes = True
         orm_mode = True
+
+
+class TaskUpdate(BaseModel):
+    title:       Optional[str]          = None
+    description: Optional[str]          = None
+    status:      Optional[TaskStatus]   = None
+    priority:    Optional[TaskPriority] = None
+    project_id:  Optional[int]          = None
+
+# ✅ FIX: Alias so tasks.py route can import TaskResponse
+TaskResponse = TaskOut

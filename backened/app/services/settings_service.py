@@ -8,9 +8,6 @@ from app.models.settings_model import UserSettings
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-# ══════════════════════════════════════════
-# PROFILE SERVICE
-# ══════════════════════════════════════════
 def get_profile(db: Session, user_id: int):
     return db.query(User).filter(User.id == user_id).first()
 
@@ -27,9 +24,6 @@ def update_profile(db: Session, user_id: int, data: dict):
     return user
 
 
-# ══════════════════════════════════════════
-# PASSWORD SERVICE
-# ══════════════════════════════════════════
 def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
@@ -51,16 +45,10 @@ def change_password(db: Session, user_id: int, current_pw: str, new_pw: str, con
     return {"success": True}
 
 
-# ══════════════════════════════════════════
-# USER SETTINGS SERVICE
-# ══════════════════════════════════════════
 def get_or_create_settings(db: Session, user_id: int):
-    # Pehle check karo — already exist karta hai?
     settings = db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
     if settings:
         return settings
-
-    # Nahi mila — try to create, but race condition se bachao
     try:
         settings = UserSettings(user_id=user_id)
         db.add(settings)
@@ -68,7 +56,6 @@ def get_or_create_settings(db: Session, user_id: int):
         db.refresh(settings)
         return settings
     except IntegrityError:
-        # Duplicate entry — doosri request ne pehle insert kar diya
         db.rollback()
         return db.query(UserSettings).filter(UserSettings.user_id == user_id).first()
 
