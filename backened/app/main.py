@@ -4,10 +4,14 @@ from fastapi.responses import JSONResponse
 import logging
 
 # Importing routers
+from app.routes.client_portal import router as client_portal_router
+
 from app.routes.health import router as health_router
 from app.routes.auth import router as auth_router
 from app.routes.clients import router as clients_router
 from app.routes import projects, tasks, time_entries, invoices, conversations, messages, dashboard
+from app.routes.chat import router as chat_router
+
 from app.routes import settings
 
 app = FastAPI(
@@ -69,11 +73,15 @@ def root():
 app.include_router(health_router, prefix="/health", tags=["Health"])
 app.include_router(auth_router, prefix="/auth", tags=["Auth"])
 app.include_router(clients_router)
+app.include_router(client_portal_router, prefix="/client-portal", tags=["Client Portal"])
+
 app.include_router(projects.router, prefix="/projects", tags=["Projects"])
 app.include_router(tasks.router, prefix="/tasks", tags=["Tasks"])
 app.include_router(time_entries.router, prefix="/time-entries", tags=["Time Entries"])
 app.include_router(invoices.router)
 app.include_router(conversations.router, prefix="/conversations", tags=["AI Chat"])
+app.include_router(chat_router, prefix="/chat", tags=["Chatbot"])
+
 app.include_router(messages.router, prefix="/messages", tags=["Messages"])
 app.include_router(dashboard.router, prefix="/dashboard", tags=["Dashboard"])
 app.include_router(settings.router)

@@ -3,9 +3,6 @@ from typing import Optional
 from datetime import datetime
 
 
-# ══════════════════════════════════════════
-# PROFILE SCHEMAS
-# ══════════════════════════════════════════
 class ProfileUpdate(BaseModel):
     full_name: Optional[str]      = None
     email:     Optional[EmailStr] = None
@@ -25,18 +22,12 @@ class ProfileOut(BaseModel):
         orm_mode = True
 
 
-# ══════════════════════════════════════════
-# PASSWORD SCHEMA
-# ══════════════════════════════════════════
 class PasswordChange(BaseModel):
     current_password: str
     new_password:     str
     confirm_password: str
 
 
-# ══════════════════════════════════════════
-# USER SETTINGS SCHEMAS
-# ══════════════════════════════════════════
 class SettingsUpdate(BaseModel):
     currency:             Optional[str]   = None
     tax_label:            Optional[str]   = None

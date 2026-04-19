@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
-import secrets, hashlib, os
+import secrets, hashlib
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 
@@ -12,12 +12,14 @@ from app.schemas.auth import Token
 from app.services.user_service import get_user_by_email, create_user, get_user_by_id
 from app.services.auth_service import verify_password, create_access_token, hash_password
 from app.services.email_service import send_reset_email
+from app.config import settings
+from app.models.user import User
 
 router = APIRouter(tags=["Auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key")
-ALGORITHM  = "HS256"
+SECRET_KEY = settings.SECRET_KEY
+ALGORITHM  = settings.ALGORITHM
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
@@ -54,7 +56,7 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
         user_id = int(payload.get("sub"))
     except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Invalid token")
-    user = get_user_by_id(db, user_id)
+    user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user

@@ -5,7 +5,8 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.dashboard_schema import DashboardSummaryResponse
 from app.services.dashboard_service import get_dashboard_summary
 
-router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
+# ✅ FIX: Removed prefix="/dashboard" — main.py already adds it
+router = APIRouter(tags=["Dashboard"])
 
 
 @router.get("/summary", response_model=DashboardSummaryResponse)
