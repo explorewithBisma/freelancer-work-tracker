@@ -1,113 +1,127 @@
-# FWT — Freelancer Work Tracker
+# 🚀 FWT — Freelancer Work Tracker
 
-A full-stack web application designed to help freelancers manage their projects, tasks, time tracking, invoices, and client relationships in one place.
-
----
-
-## Features
-
-### Freelancer Dashboard
-- Real-time overview of projects, tasks, hours, and revenue
-- Productivity ring and weekly goal tracker
-- Activity chart with monthly breakdown
-- Notifications for pending tasks and unpaid invoices
-
-### Project Management
-- Create, edit, and delete projects
-- Link projects to clients
-- Filter by status: Active, On Hold, Completed
-
-### Task Management
-- Kanban board: To Do, In Progress, Done
-- Priority levels: High, Medium, Low
-- Integrated stopwatch for real-time time tracking per task
-
-### Time Tracking
-- Auto-save from stopwatch on task cards
-- Manual time entry support
-- View all sessions with notes and durations
-
-### Invoice Management
-- Generate invoices linked to clients and projects
-- Status workflow: Draft, Sent, Paid
-- PDF preview and browser print support
-
-### Client Management
-- Add and manage clients with contact details
-- Set client portal access via email and password
-- Automated portal invitation email sent to client
-
-### Client Portal
-- Separate login for clients
-- View assigned project progress with visual progress bars
-- View invoice status and pending amounts
-- Built-in chatbot assistant for project-related queries
-
-### Chatbot Assistant
-- Rule-based assistant available for both freelancer and client
-- Responds to queries about projects, tasks, revenue, hours, and clients
-- Floating widget accessible on all authenticated pages
-
-### Settings
-- Update profile: name, email, phone, bio
-- Change password with strength indicator
-- Configure default currency and tax rate for invoices
+A full-stack web application for freelancers to manage projects, track time, generate invoices, and collaborate with clients — all in one clean dashboard.
 
 ---
 
-## Tech Stack
+## 🌟 Features
 
-| Layer          | Technology              |
-|----------------|-------------------------|
-| Frontend       | React.js, CSS3          |
-| Backend        | FastAPI (Python)        |
-| Database       | MySQL                   |
-| Authentication | JWT (JSON Web Tokens)   |
-| Email          | Gmail SMTP              |
-| Version Control| Git and GitHub          |
+### 👨‍💻 Freelancer Dashboard
+- **Project Management** — Create, edit, filter and close projects with deadlines
+- **Task Management** — Kanban board (To Do → In Progress → Done) with priority levels
+- **Time Tracking** — Real-time stopwatch with localStorage persistence + manual entries
+- **Invoice Generation** — Auto-generated invoices with PDF preview and status tracking (Draft → Sent → Paid)
+- **Client Management** — Add clients, view detailed client pages with stats
+- **Settings** — Profile, password, currency & tax preferences
+- **AI Chatbot** — Powered by Gemma 3-27B, answers questions about your real-time data
+
+### 👥 Client Portal
+- Secure JWT-based client login (isolated per freelancer)
+- View assigned projects with progress bars
+- View invoices with PDF preview & print
+- AI-powered Portal Assistant chatbot
+- Data isolation — same client email, different freelancers = different data
+
+### 🌐 Landing Page
+- Responsive landing page with hero section
+- FAQ + AI-powered chatbot (Gemma 3-4B, fast responses)
+- Feature showcase, footer with contact info
 
 ---
 
-## Project Structure
+## 🛠️ Tech Stack
+
+| Layer     | Technology                        |
+|-----------|-----------------------------------|
+| Frontend  | React 18, React Router, Axios     |
+| Backend   | FastAPI, SQLAlchemy, Uvicorn      |
+| Database  | MySQL                             |
+| Auth      | JWT (JSON Web Tokens)             |
+| AI        | Google Gemma (via Google AI Studio) |
+| Email     | SMTP (Gmail)                      |
+| Styling   | Custom CSS, Responsive Design     |
+
+---
+
+## 📁 Project Structure
 
 ```
 freelancer-work-tracker/
-├── backend/
-│   ├── app/
-│   │   ├── models/          # SQLAlchemy database models
-│   │   ├── routes/          # FastAPI route handlers
-│   │   ├── schemas/         # Pydantic request/response schemas
-│   │   ├── services/        # Business logic layer
-│   │   ├── config.py        # Application configuration
-│   │   ├── database.py      # Database connection setup
-│   │   └── dependencies.py  # Auth and DB dependencies
-│   └── main.py
+├── frontend/                  # React App
+│   ├── src/
+│   │   ├── pages/             # All page components
+│   │   │   ├── landing.jsx
+│   │   │   ├── LandingChatWidget.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Clients.jsx
+│   │   │   ├── ClientDetail.jsx
+│   │   │   ├── Projects.jsx
+│   │   │   ├── Tasks.jsx
+│   │   │   ├── TimeEntries.jsx
+│   │   │   ├── Invoices.jsx
+│   │   │   ├── Settings.jsx
+│   │   │   ├── clientportal.jsx
+│   │   │   └── ClientChatWidget.jsx
+│   │   ├── components/        # Shared components
+│   │   │   ├── layout.jsx
+│   │   │   └── ChatWidget.jsx
+│   │   └── api/               # Axios API calls
+│   └── public/
 │
-└── frontend/
-    └── src/
-        ├── api/             # Axios API service calls
-        ├── auth/            # Authentication context
-        ├── components/      # Reusable components (Layout, ChatWidget)
-        └── pages/           # All application page components
+└── backened/                  # FastAPI App
+    └── app/
+        ├── routes/            # API endpoints
+        │   ├── auth.py
+        │   ├── clients.py
+        │   ├── projects.py
+        │   ├── tasks.py
+        │   ├── time_entries.py
+        │   ├── invoices.py
+        │   ├── dashboard.py
+        │   ├── settings.py
+        │   ├── chat.py
+        │   └── clientportal.py
+        ├── models/            # SQLAlchemy models
+        ├── schemas/           # Pydantic schemas
+        ├── services/          # Business logic
+        └── main.py
 ```
 
 ---
 
-## Getting Started
+## ⚙️ Setup & Installation
 
 ### Prerequisites
-- Python 3.10 or higher
-- Node.js 18 or higher
-- MySQL 8.0 or higher
+- Node.js 18+
+- Python 3.11+
+- MySQL 8+
+- Google AI Studio API Key
 
 ### Backend Setup
 
 ```bash
-cd backend
+cd backened
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate        # Windows
 pip install -r requirements.txt
-uvicorn app.main:app --reload
+
+# Create .env file
+cp .env.example .env
+# Fill in: DB_URL, SECRET_KEY, API_KEY, EMAIL credentials
+```
+
+### Database Setup
+
+```sql
+CREATE DATABASE freelancer_db;
+```
+
+```bash
+# Run migrations
+alembic upgrade head
+
+# Or create tables directly
+python -c "from app.database import Base, engine; Base.metadata.create_all(bind=engine)"
 ```
 
 ### Frontend Setup
@@ -118,43 +132,71 @@ npm install
 npm start
 ```
 
-### Environment Variables
+### Running the App
 
-Create a `.env` file inside the `backend/` directory:
+```bash
+# Terminal 1 — Backend
+cd backened
+uvicorn app.main:app --reload
 
+# Terminal 2 — Frontend
+cd frontend
+npm start
 ```
-SECRET_KEY=your_secret_key_here
+
+Visit: `http://localhost:3000`
+
+---
+
+## 🔐 Environment Variables
+
+Create `backened/.env`:
+
+```env
+DATABASE_URL=mysql+pymysql://root:password@localhost/freelancer_db
+SECRET_KEY=your-secret-key-here
 ALGORITHM=HS256
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-DATABASE_URL=mysql+pymysql://root:password@localhost/freelancer_work_tracker
-MAIL_USERNAME=your_email@gmail.com
-MAIL_PASSWORD=your_gmail_app_password
-FRONTEND_URL=http://localhost:3000
+ACCESS_TOKEN_EXPIRE_MINUTES=10080
+API_KEY=your-google-ai-studio-key
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USERNAME=your-email@gmail.com
+EMAIL_PASSWORD=your-app-password
 ```
 
 ---
 
-## API Documentation
+## 📱 Responsive Design
 
-Once the backend is running, visit:
+Fully responsive across all screen sizes:
 
-```
-http://localhost:8000/docs
-```
-
-FastAPI provides interactive Swagger UI documentation for all endpoints.
-
----
-
-## Academic Context
-
-This project was developed as a Final Year Project (FYP) for the degree of BS Software Engineering at the University of Lahore.
-
-- Developer: Bisma Noreen
-- Session: 2022 - 2026
+| Breakpoint | Size |
+|------------|------|
+| Extra Small | < 380px |
+| Small | < 480px |
+| Medium | < 768px |
+| Large | < 1024px |
+| Extra Large | 1024px+ |
 
 ---
 
-## License
+## 🤖 AI Chatbots
 
-This project is developed for academic purposes only.
+| Bot | Model | Auth Required |
+|-----|-------|---------------|
+| Landing Bot | Gemma 3-4B (fast) | No |
+| Freelancer Bot | Gemma 3-27B | Yes (JWT) |
+| Client Portal Bot | Gemma 3-27B | Yes (Client JWT) |
+
+---
+
+## 👩‍💻 Developer
+
+**Bisma Noreen**
+University of Lahore — Final Year Project (FYP)
+
+---
+
+## 📄 License
+
+This project is for educational purposes.
