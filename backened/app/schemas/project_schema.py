@@ -8,7 +8,7 @@ class ProjectCreate(BaseModel):
     description: Optional[str] = None
     hourly_rate: Optional[float] = None
     status: Optional[str] = None
-
+    deadline: Optional[str] = None
 
 class ProjectResponse(BaseModel):
     id: int
@@ -19,6 +19,7 @@ class ProjectResponse(BaseModel):
     hourly_rate: Optional[float] = None
     status: Optional[str] = None
     created_at: datetime
+    deadline: Optional[str] = None
 
     class Config:
         orm_mode = True
