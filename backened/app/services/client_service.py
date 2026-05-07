@@ -9,7 +9,7 @@ def create_client(db: Session, user_id: int, name: str, email: str = None, phone
         phone=phone,
         company=company
     )
-    db.add(client)
+    db.add(client) #naye user ka data queue me rkhna
     db.commit()
     db.refresh(client)
     return client

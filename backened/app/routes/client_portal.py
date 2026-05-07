@@ -20,8 +20,9 @@ router = APIRouter(tags=["Client Portal"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/client-portal/login")
 
+# ✅ FIX: client_id use karo email ki jagah
 class ClientSetPassword(BaseModel):
-    email: EmailStr
+    client_id: int
     password: str
 
 class ClientToken(BaseModel):
@@ -51,23 +52,23 @@ def get_current_client(token: str = Depends(oauth2_scheme), db: Session = Depend
 
 
 # ════════════════════════════════
-# SET PASSWORD — freelancer sets for THEIR specific client
-# ✅ FIX: Uses freelancer auth to find exact client record
+# SET PASSWORD — client_id se exact client dhundo
+# ✅ FIX: Same email wale multiple clients mein se sahi wala milega
 # ════════════════════════════════
 @router.post("/set-password", status_code=200)
 def set_client_password(
     payload: ClientSetPassword,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # ✅ Freelancer must be logged in
+    current_user = Depends(get_current_user)
 ):
-    # Find client belonging to THIS freelancer with this email
+    # ✅ client_id + user_id dono match — exact client milega
     client = db.query(Client).filter(
-        Client.email == payload.email,
-        Client.user_id == current_user.id  # ✅ Only this freelancer's client
+        Client.id == payload.client_id,
+        Client.user_id == current_user.id
     ).first()
 
     if not client:
-        raise HTTPException(status_code=404, detail="No client found with this email")
+        raise HTTPException(status_code=404, detail="Client not found")
 
     client.password_hash = hash_password(payload.password)
     db.commit()
@@ -86,15 +87,14 @@ def set_client_password(
 
 # ════════════════════════════════
 # CLIENT LOGIN
-# ✅ FIX: Match by email + password — returns correct client_id
-# Each freelancer sets different password → different client_id → different data
+# ✅ email + password dono match — correct client milega
 # ════════════════════════════════
 @router.post("/login", response_model=ClientToken)
 def client_login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    # Get ALL clients with this email across all freelancers
+    # Same email wale saare clients dhundo
     clients = db.query(Client).filter(
         Client.email == form_data.username,
         Client.password_hash != None
@@ -103,7 +103,7 @@ def client_login(
     if not clients:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Find the one whose password matches
+    # Jiska password match kare woh exact client
     matched_client = None
     for client in clients:
         if verify_password(form_data.password, client.password_hash):
@@ -113,7 +113,6 @@ def client_login(
     if not matched_client:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # Token contains this specific client's ID → correct freelancer's data
     token = create_client_token(matched_client.id)
     return {"access_token": token, "token_type": "bearer"}
 
@@ -133,7 +132,7 @@ def get_client_me(current_client: Client = Depends(get_current_client)):
 
 # ════════════════════════════════
 # CLIENT DASHBOARD
-# ✅ Data is isolated by client_id which is per-freelancer
+# ✅ Data isolated by client_id — har client ka alag data
 # ════════════════════════════════
 @router.get("/dashboard")
 def client_dashboard(

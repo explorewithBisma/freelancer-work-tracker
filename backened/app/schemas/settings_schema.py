@@ -43,23 +43,22 @@ class SettingsUpdate(BaseModel):
     notif_email_digest:   Optional[bool]  = None
     notif_browser_push:   Optional[bool]  = None
 
-
 class SettingsOut(BaseModel):
     id:                   int
     user_id:              int
-    currency:             str
-    tax_label:            str
-    tax_rate:             float
-    language:             str
-    theme:                str
-    accent_color:         str
-    compact_mode:         bool
-    notif_invoice_paid:   bool
-    notif_project_update: bool
-    notif_task_reminder:  bool
-    notif_weekly_report:  bool
-    notif_email_digest:   bool
-    notif_browser_push:   bool
-
+    currency:             Optional[str]   = "USD"
+    tax_label:            Optional[str]   = "Tax"
+    tax_rate:             Optional[float] = 0.0
+    language:             Optional[str]   = "en"
+    theme:                Optional[str]   = "light"
+    accent_color:         Optional[str]   = "#3b82f6"
+    compact_mode:         Optional[bool]  = False
+    notif_invoice_paid:   Optional[bool]  = True
+    notif_project_update: Optional[bool]  = True
+    notif_task_reminder:  Optional[bool]  = True
+    notif_weekly_report:  Optional[bool]  = True
+    notif_email_digest:   Optional[bool]  = True
+    notif_browser_push:   Optional[bool]  = True
+    
     class Config:
         orm_mode = True

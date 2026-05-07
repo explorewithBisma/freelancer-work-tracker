@@ -28,7 +28,7 @@ def add_task(
         payload.title,
         payload.description,
         payload.status,
-        payload.priority,   # ✅ NEW: pass priority
+        payload.priority,   #pass priority
     )
     return task
 

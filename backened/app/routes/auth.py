@@ -1,6 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+#for organizing all endpoints, unauthorized access 401 , 404 status no found
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+#for username , password , for chcking the bearer in header
 from sqlalchemy.orm import Session
+#tool of sqlalchemy for transaction with db like read and write 
 from pydantic import BaseModel, EmailStr
 import secrets, hashlib
 from datetime import datetime, timedelta

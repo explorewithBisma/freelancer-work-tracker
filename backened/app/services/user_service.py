@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from passlib.context import CryptContext
 
-# ✅ FIX: hash_password directly here — removes circular import with auth_service
+#  hash_password directly here — removes circular import with auth_service
 _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 

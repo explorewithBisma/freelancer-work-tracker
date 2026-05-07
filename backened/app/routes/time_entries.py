@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
+from pydantic import BaseModel
+from typing import List, Optional
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.time_entry_schema import TimeEntryCreate, TimeEntryResponse
@@ -12,11 +13,15 @@ from app.models.task import Task
 
 router = APIRouter(tags=["Time Entries"])
 
+#Note update ke liye schema
+class TimeEntryNoteUpdate(BaseModel):
+    note: Optional[str] = None
+
 @router.post("/", response_model=TimeEntryResponse)
 def add_time_entry(
     payload: TimeEntryCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # ✅ Auth added
+    current_user = Depends(get_current_user)
 ):
     try:
         entry = create_time_entry(
@@ -34,9 +39,9 @@ def add_time_entry(
 @router.get("/", response_model=List[TimeEntryResponse])
 def read_time_entries(
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)  # ✅ Auth added
+    current_user = Depends(get_current_user)
 ):
-    # ✅ FIX: Only return entries for current user's tasks
+    # Only return entries for current user's tasks
     entries = (
         db.query(TimeEntry)
         .join(Task, TimeEntry.task_id == Task.id)
@@ -56,7 +61,30 @@ def read_time_entry(
         raise HTTPException(status_code=404, detail="Time entry not found")
     return entry
 
-@router.delete("/{entry_id}")
+# PATCH endpoint — note update karne ke liye
+@router.patch("/{entry_id}/", response_model=TimeEntryResponse)
+def update_time_entry_note(
+    entry_id: int,
+    payload: TimeEntryNoteUpdate,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    # Current user ka entry hai ya nahi check karo
+    entry = (
+        db.query(TimeEntry)
+        .join(Task, TimeEntry.task_id == Task.id)
+        .filter(TimeEntry.id == entry_id, Task.user_id == current_user.id)
+        .first()
+    )
+    if not entry:
+        raise HTTPException(status_code=404, detail="Time entry not found")
+
+    entry.note = payload.note
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+@router.delete("/{entry_id}/")
 def remove_time_entry(
     entry_id: int,
     db: Session = Depends(get_db),

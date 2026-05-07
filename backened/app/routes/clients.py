@@ -22,7 +22,8 @@ class ClientUpdate(BaseModel):
 def add_client(
     payload: ClientCreate,
     db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_current_user)   #for chcking the user(freelancer) login , and have valid tokens
+
 ):
     return create_client(db, current_user.id, payload.name, payload.email, payload.phone, payload.company)
 
@@ -47,7 +48,7 @@ def read_client(
     return client
 
 
-# ✅ NEW: Update client endpoint
+# NEW: Update client endpoint
 @router.put("/{client_id}", response_model=ClientOut)
 def update_client(
     client_id: int,
