@@ -3,7 +3,9 @@ uvicorn
 gunicorn
 sqlalchemy
 pymysql
+cryptography
 python-dotenv
 passlib[bcrypt]
 python-jose
 groq
+python-multipart
