@@ -193,7 +193,7 @@ Fully responsive across all screen sizes:
 ## 👩‍💻 Developer
 
 **Bisma Noreen**
-University of Lahore — Final Year Project (FYP)
+University of gujrat — Final Year Project (FYP)
 
 ---
 
