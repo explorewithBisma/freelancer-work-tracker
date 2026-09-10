@@ -17,7 +17,7 @@ from app.models.client import Client
 router = APIRouter(tags=["Chatbot"])
 
 groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-MODEL = "llama-3.1-8b-instant"
+MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
 class ChatRequest(BaseModel):
