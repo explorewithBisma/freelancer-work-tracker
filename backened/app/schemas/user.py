@@ -17,4 +17,4 @@ class UserOut(BaseModel):
 
     #  Pydantic v1 syntax — ConfigDict(from_attributes=True) Pydantic v2 ka tha
     class Config:
-        orm_mode = True
+        from_attributes = True

@@ -6,6 +6,8 @@ pymysql
 cryptography
 python-dotenv
 passlib[bcrypt]
+bcrypt==4.0.1
 python-jose
 groq
 python-multipart
+email-validator==2.3.0

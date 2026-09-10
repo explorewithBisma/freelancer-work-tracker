@@ -19,7 +19,7 @@ class ProfileOut(BaseModel):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PasswordChange(BaseModel):
@@ -61,4 +61,4 @@ class SettingsOut(BaseModel):
     notif_browser_push:   Optional[bool]  = True
     
     class Config:
-        orm_mode = True
+        from_attributes = True

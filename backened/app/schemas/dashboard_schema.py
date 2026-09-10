@@ -42,4 +42,4 @@ class DashboardSummaryResponse(BaseModel):
     activity_data: List[ActivityItem]
 
     class Config:
-        orm_mode = True
+        from_attributes = True

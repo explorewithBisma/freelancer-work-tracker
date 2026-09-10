@@ -18,6 +18,4 @@ class TimeEntryResponse(TimeEntryBase):
     created_at: datetime
 
     class Config:
-        # Pydantic v2 uses 'from_attributes', v1 uses 'orm_mode'
-        # Since you're using orm_mode, I'll keep it for compatibility
-        orm_mode = True
+        from_attributes = True
