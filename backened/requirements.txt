@@ -3,6 +3,7 @@ uvicorn
 gunicorn
 sqlalchemy
 pymysql
+psycopg2-binary
 cryptography
 python-dotenv
 passlib[bcrypt]

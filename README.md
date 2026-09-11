@@ -37,7 +37,7 @@ A full-stack web application for freelancers to manage projects, track time, gen
 |-----------|-----------------------------------|
 | Frontend  | React 19, React Router, Axios     |
 | Backend   | FastAPI, SQLAlchemy, Uvicorn      |
-| Database  | MySQL                             |
+| Database  | MySQL or PostgreSQL (via SQLAlchemy) |
 | Auth      | JWT (JSON Web Tokens)             |
 | AI        | Groq API (`openai/gpt-oss-20b` by default) |
 | Styling   | Custom CSS, Responsive Design     |
@@ -73,7 +73,7 @@ freelancer-work-tracker/
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+
-- MySQL 8+
+- A database — either MySQL 8+ (good for local dev) or PostgreSQL 14+ (good for free-tier deployment on Neon/Supabase/Koyeb, since free MySQL hosting without a credit card is scarce). The app supports both — see Database setup below.
 - A [Groq API key](https://console.groq.com) — needed for the AI chatbot features
 
 ### 1. Backend setup
@@ -87,14 +87,19 @@ venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 ```
 
-`requirements.txt` already includes everything needed — notably `email-validator` (required by Pydantic's `EmailStr` fields; the app won't start without it) and a pinned `bcrypt==4.0.1` (newer `bcrypt` releases break password hashing under the `passlib` version this project uses).
+`requirements.txt` already includes everything needed — notably `email-validator` (required by Pydantic's `EmailStr` fields; the app won't start without it), a pinned `bcrypt==4.0.1` (newer `bcrypt` releases break password hashing under the `passlib` version this project uses), and both database drivers (`pymysql` for MySQL, `psycopg2-binary` for PostgreSQL) so either works without installing anything extra.
 
 ### 2. Configure environment variables
 
 Create `backened/.env` (this file is **git-ignored — never commit it**, see note at the bottom):
 
 ```env
+# MySQL (local dev):
 DATABASE_URL=mysql+pymysql://<db_user>:<db_password>@127.0.0.1:3306/freelancer_work_tracker
+
+# PostgreSQL (e.g. Neon/Supabase, for deployment) — use this format instead:
+# DATABASE_URL=postgresql://<db_user>:<db_password>@<host>:5432/<db_name>
+
 SECRET_KEY=<a-long-random-secret-string>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
@@ -104,7 +109,7 @@ GROQ_MODEL=openai/gpt-oss-20b
 
 | Variable | Required | Notes |
 |---|---|---|
-| `DATABASE_URL` | Yes | SQLAlchemy connection string. Use a dedicated MySQL user, not `root` (see Database section). |
+| `DATABASE_URL` | Yes | SQLAlchemy connection string — MySQL or PostgreSQL, see Database section. Use a dedicated app user, not `root`/a superuser. |
 | `SECRET_KEY` | Yes | Signs JWTs. Any long random string — e.g. `python -c "import secrets; print(secrets.token_hex(32))"`. |
 | `ALGORITHM` | Yes | JWT signing algorithm. Leave as `HS256` unless you have a reason to change it. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | Yes | How long login tokens stay valid. |
@@ -113,7 +118,11 @@ GROQ_MODEL=openai/gpt-oss-20b
 
 ### 3. Database setup
 
-Create a dedicated MySQL database and app user — avoid using `root` for the running app:
+The app works against either MySQL or PostgreSQL — SQLAlchemy abstracts the difference, and both drivers are already in `requirements.txt`. Pick one.
+
+**Option A — MySQL (local dev)**
+
+Create a dedicated database and app user — avoid using `root` for the running app:
 
 ```sql
 CREATE DATABASE freelancer_work_tracker CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -122,13 +131,35 @@ GRANT ALL PRIVILEGES ON freelancer_work_tracker.* TO 'fwt_user'@'localhost';
 FLUSH PRIVILEGES;
 ```
 
-Put those credentials into `DATABASE_URL` above, then create the tables:
+```
+DATABASE_URL=mysql+pymysql://fwt_user:<a-strong-password>@127.0.0.1:3306/freelancer_work_tracker
+```
+
+**Option B — PostgreSQL (e.g. Neon, Supabase, Koyeb — good for free-tier deployment)**
+
+Create a database and app user (adjust to whatever your provider's dashboard/CLI gives you — most managed Postgres providers create the database and a user for you and just hand you a connection string):
+
+```sql
+CREATE DATABASE freelancer_work_tracker;
+CREATE USER fwt_user WITH PASSWORD '<a-strong-password>';
+GRANT ALL PRIVILEGES ON DATABASE freelancer_work_tracker TO fwt_user;
+```
+
+```
+DATABASE_URL=postgresql://fwt_user:<a-strong-password>@<host>:5432/freelancer_work_tracker
+```
+
+Neon and Supabase often hand you a `postgres://...` URL — `app/database.py` automatically normalizes that to `postgresql://...` (SQLAlchemy 1.4+ requires the longer form), so either works.
+
+**Then, regardless of which database you chose:**
+
+Put the credentials into `DATABASE_URL` in `.env`, then create the tables:
 
 ```bash
 python create_tables.py
 ```
 
-**There is no Alembic migration setup in this project.** `create_tables.py` simply calls SQLAlchemy's `Base.metadata.create_all()` — it creates whatever tables don't exist yet and leaves existing tables untouched. It's safe to re-run, but it will **not** pick up schema changes to a table that already exists (no column diffing, no `ALTER`). If you change a model later, you'll need to either hand-write the `ALTER TABLE` (see `Database/fwt database.sql` for examples of that style) or introduce a real migration tool yourself.
+**There is no Alembic migration setup in this project.** `create_tables.py` simply calls SQLAlchemy's `Base.metadata.create_all()` — it creates whatever tables don't exist yet and leaves existing tables untouched, regardless of which database engine is behind `DATABASE_URL`. It's safe to re-run, but it will **not** pick up schema changes to a table that already exists (no column diffing, no `ALTER`). If you change a model later, you'll need to either hand-write the `ALTER` statement for whichever database you're running, or introduce a real migration tool yourself. (`Database/fwt database.sql` in the repo root is old MySQL-only history from before this file supported Postgres — see the header comment in that file — not something to run today.)
 
 ### 4. Run the backend
 

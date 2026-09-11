@@ -13,6 +13,10 @@ if not DATABASE_URL:
 if DATABASE_URL.startswith("mysql://"):
     DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
 
+# Neon/Supabase hand out postgres:// by default; SQLAlchemy 1.4+ requires postgresql://
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 engine = create_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(

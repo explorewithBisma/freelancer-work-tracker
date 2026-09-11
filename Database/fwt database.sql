@@ -1,3 +1,17 @@
+-- ══════════════════════════════════════════════════════════════════
+-- HISTORICAL REFERENCE ONLY — MySQL-specific, not used by the app.
+--
+-- This is a leftover ALTER TABLE / CREATE TABLE patch script from when
+-- the project ran on MySQL. It is not executed by any code path (the
+-- app creates tables via `python create_tables.py`, which reads the
+-- SQLAlchemy models directly and works against either MySQL or
+-- PostgreSQL). This file's syntax (AUTO_INCREMENT, TINYINT(1),
+-- ON UPDATE CURRENT_TIMESTAMP, SHOW TABLES, DESCRIBE) is MySQL-only
+-- and will not run as-is on PostgreSQL. It is also out of date versus
+-- the current UserSettings model (several columns below, e.g. theme,
+-- accent_color, the notif_* flags, don't exist in the model anymore).
+-- Kept for history, not as documentation of the current schema.
+-- ══════════════════════════════════════════════════════════════════
 
 use freelancer_work_tracker;
 USE freelancer_work_tracker;
