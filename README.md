@@ -1,5 +1,8 @@
 # FWT — Freelancer Work Tracker
 
+Developed by Bisma Noreen — solo Final Year Project, BS IT, University of Gujrat (2026).
+Full stack (FastAPI + React + Groq AI) designed and built independently.
+
 A full-stack web application for freelancers to manage projects, track time, generate invoices, and collaborate with clients — all in one clean dashboard.
 
 > **Note on folder naming:** the backend lives in `backened/` (not `backend/`) — that's a pre-existing typo baked into the project layout, not a typo in this README. Every command below uses the real folder name so copy-paste works.
@@ -215,11 +218,14 @@ All three chatbots share one Groq model (`GROQ_MODEL`, defaults to `openai/gpt-o
 
 ## Developer
 
-**Bisma Noreen**
-University of Gujrat — Final Year Project (FYP)
+**Bisma Noreen** sole developer
+University of Gujrat — Final Year Project (FYP), 2026
+
+- GitHub: [@explorewithBisma](https://github.com/explorewithBisma)
 
 ---
 
 ## License
 
-This project is for educational purposes.
+MIT License © 2026 Bisma Noreen — see [LICENSE](LICENSE) for details.
+Any copy or fork must keep the original copyright notice.
