@@ -223,7 +223,7 @@ University of Gujrat — Final Year Project (FYP), 2026
 
 - GitHub: [@explorewithBisma](https://github.com/explorewithBisma)
 
----
+If you fork or build on this project, please keep this credit and link back to the original repository.
 
 ## License
 
