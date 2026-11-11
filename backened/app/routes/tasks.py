@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -75,7 +76,8 @@ def remove_task(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    success = delete_task(db, task_id, current_user.id)
+    with conflict_on_integrity(db, "This task could not be deleted because other records still depend on it."):
+        success = delete_task(db, task_id, current_user.id)
     if not success:
         raise HTTPException(status_code=404, detail="Task not found")
     return {"message": "Task deleted successfully"}

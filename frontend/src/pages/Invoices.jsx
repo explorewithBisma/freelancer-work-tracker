@@ -91,7 +91,7 @@ function InvoicePDF({ invoice, client, project, onClose }) {
                 <tr>
                   <td>
                     <div className="pdf-desc-main">Freelance Services</div>
-                    {project && <div className="pdf-desc-sub">{project.title}</div>}
+                    {(project?.title || invoice.project_name) && <div className="pdf-desc-sub">{project?.title || invoice.project_name}</div>}
                   </td>
                   <td>{formatDate(invoice.date_from)} — {formatDate(invoice.date_to)}</td>
                   <td className="pdf-amount" style={{ textAlign: 'right' }}>
@@ -193,7 +193,7 @@ export default function Invoices() {
       await api.delete(`/invoices/${id}`);
       setInvoices(prev => prev.filter(inv => inv.id !== id));
       setDeleteConfirm(null);
-    } catch { alert("Failed to delete invoice."); }
+    } catch (err) { alert(err.response?.data?.detail || "Failed to delete invoice."); }
   };
 
   const getClient = (id) => clients.find(c => String(c.id) === String(id));
@@ -327,7 +327,7 @@ export default function Invoices() {
                 <div className="inv-client-avatar">{(client?.name||"?").charAt(0).toUpperCase()}</div>
                 <div>
                   <div className="inv-client-name">{client?.name || `Client #${inv.client_id}`}</div>
-                  {project && <div className="inv-project-tag">{Icons.folder} {project.title}</div>}
+                  {(project?.title || inv.project_name) && <div className="inv-project-tag">{Icons.folder} {project?.title || inv.project_name}</div>}
                 </div>
               </div>
               <div className="inv-card-amount">{fmtAmount(inv.total_amount)}</div>

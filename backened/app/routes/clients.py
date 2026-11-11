@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -77,7 +78,8 @@ def remove_client(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    client = delete_client(db, client_id, current_user.id)
+    with conflict_on_integrity(db, "This client has invoices. Delete them first."):
+        client = delete_client(db, client_id, current_user.id)
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted successfully"}

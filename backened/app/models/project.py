@@ -6,7 +6,7 @@ class Project(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"))
-    client_id = Column(Integer, ForeignKey("clients.id"))
+    client_id = Column(Integer, ForeignKey("clients.id", ondelete="CASCADE"))
     title = Column(String(255), nullable=False)
     description = Column(String(500), nullable=True)
     hourly_rate = Column(Float, nullable=True)

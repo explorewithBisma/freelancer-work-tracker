@@ -7,7 +7,10 @@ class Invoice(Base):
     id             = Column(Integer, primary_key=True, index=True)
     user_id        = Column(Integer, ForeignKey("users.id"), nullable=False)
     client_id      = Column(Integer, ForeignKey("clients.id"), nullable=False)
-    project_id     = Column(Integer, ForeignKey("projects.id"), nullable=True)
+    # SET NULL: invoices must survive when their project is deleted/closed.
+    project_id     = Column(Integer, ForeignKey("projects.id", ondelete="SET NULL"), nullable=True)
+    # Snapshot of the project title, so the invoice still says what it was for after project_id is nulled.
+    project_name   = Column(String(255), nullable=True)
     invoice_number = Column(String(60), unique=True, nullable=False)
     date_from      = Column(Date, nullable=False)
     date_to        = Column(Date, nullable=False)

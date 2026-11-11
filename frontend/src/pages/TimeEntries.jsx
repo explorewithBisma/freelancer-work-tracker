@@ -54,7 +54,7 @@ export default function TimeEntries() {
       await api.delete(`/time-entries/${id}/`);
       setEntries(prev => prev.filter(e => e.id !== id));
       setDeleteConfirm(null);
-    } catch { alert("Failed to delete entry."); }
+    } catch (err) { alert(err.response?.data?.detail || "Failed to delete entry."); }
   };
 
   const handleEditSave = async (id) => {

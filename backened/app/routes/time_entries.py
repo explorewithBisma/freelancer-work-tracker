@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import List, Optional
@@ -90,7 +91,8 @@ def remove_time_entry(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    success = delete_time_entry(db, entry_id)
+    with conflict_on_integrity(db, "This time entry could not be deleted because other records still depend on it."):
+        success = delete_time_entry(db, entry_id)
     if not success:
         raise HTTPException(status_code=404, detail="Time entry not found")
     return {"message": "Time entry deleted successfully"}

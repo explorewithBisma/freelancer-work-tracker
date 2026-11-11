@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
@@ -50,7 +51,8 @@ def remove_conversation(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    conversation = delete_conversation(db, conversation_id, current_user.id)
+    with conflict_on_integrity(db, "This conversation could not be deleted because other records still depend on it."):
+        conversation = delete_conversation(db, conversation_id, current_user.id)
 
     if not conversation:
         raise HTTPException(status_code=404, detail="Conversation not found")

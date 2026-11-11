@@ -6,7 +6,7 @@ class Task(Base):
 
     id          = Column(Integer, primary_key=True, index=True)
     user_id     = Column(Integer, ForeignKey("users.id"), nullable=False)
-    project_id  = Column(Integer, ForeignKey("projects.id"), nullable=False)
+    project_id  = Column(Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False)
     title       = Column(String(180), nullable=False)
     description = Column(Text, nullable=True)
     status      = Column(String(50), nullable=False, default="todo")

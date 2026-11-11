@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import date
 
 from app.dependencies import get_db, get_current_user
+from app.errors import conflict_on_integrity
 from app.schemas.project_schema import ProjectCreate, ProjectResponse
 from app.services.project_service import create_project, get_projects, get_project, delete_project
 
@@ -50,6 +51,7 @@ def auto_create_invoice(db, project, user_id):
         user_id        = user_id,
         client_id      = project.client_id,
         project_id     = project.id,
+        project_name   = project.title,
         invoice_number = inv_number,
         date_from      = date(date.today().year, 1, 1),
         date_to        = date.today(),
@@ -57,7 +59,9 @@ def auto_create_invoice(db, project, user_id):
         status         = "draft"
     )
     db.add(invoice)
-    db.commit()
+    # flush (not commit): the caller owns the transaction, so closing a project
+    # either creates the invoice AND removes the project, or neither.
+    db.flush()
     return invoice
 
 @router.post("/", response_model=ProjectResponse)
@@ -83,6 +87,8 @@ def add_project(
     # Auto invoice if created as completed
     if payload.status == "completed":
         auto_create_invoice(db, project, current_user.id)
+        db.commit()
+        db.refresh(project)
 
     return project
 
@@ -136,6 +142,7 @@ def update_project_route(
     invoice_created = None
     if payload.status == "completed" and old_status != "completed":
         invoice_created = auto_create_invoice(db, project, current_user.id)
+        db.commit()
 
     response = {
         "id":           project.id,
@@ -164,7 +171,8 @@ def remove_project(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    project = delete_project(db, project_id, current_user.id)
+    with conflict_on_integrity(db, "This project could not be deleted because other records still depend on it."):
+        project = delete_project(db, project_id, current_user.id)
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     return {"message": "Project deleted successfully"}
@@ -187,21 +195,20 @@ def close_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    # ✅ STEP 1: Auto-create invoice BEFORE deleting time entries
-    invoice_created = auto_create_invoice(db, project, current_user.id)
+    with conflict_on_integrity(db, "This project could not be closed because other records still depend on it."):
+        # STEP 1: create the invoice first (flush only), while time entries still exist.
+        invoice_created = auto_create_invoice(db, project, current_user.id)
 
-    # ✅ STEP 2: Delete tasks and time entries (NOT invoices)
-    tasks = db.query(Task).filter(Task.project_id == project_id).all()
-    task_ids = [t.id for t in tasks]
+        # STEP 2: delete time entries, tasks and the project. The invoice survives:
+        # invoices.project_id is ON DELETE SET NULL and project_name keeps the title.
+        task_ids = [t.id for t in db.query(Task).filter(Task.project_id == project_id).all()]
+        if task_ids:
+            db.query(TimeEntry).filter(TimeEntry.task_id.in_(task_ids)).delete(synchronize_session=False)
+        db.query(Task).filter(Task.project_id == project_id).delete(synchronize_session=False)
+        db.delete(project)
 
-    if task_ids:
-        db.query(TimeEntry).filter(TimeEntry.task_id.in_(task_ids)).delete(synchronize_session=False)
-
-    db.query(Task).filter(Task.project_id == project_id).delete(synchronize_session=False)
-
-    # ✅ Invoices DELETE nahi hogi — woh records rehne chahiye
-    db.delete(project)
-    db.commit()
+        # Single commit: invoice creation and deletion succeed or fail together.
+        db.commit()
 
     response = {"message": "Project closed and all related data removed successfully"}
 

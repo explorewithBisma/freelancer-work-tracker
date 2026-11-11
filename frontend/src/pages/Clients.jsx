@@ -77,7 +77,7 @@ export default function Clients() {
       await api.delete(`/clients/${id}`);
       setClients(prev => prev.filter(c => c.id !== id));
       setDeleteConfirm(null);
-    } catch { alert("Failed to delete client."); }
+    } catch (err) { alert(err.response?.data?.detail || "Failed to delete client."); }
   };
 
   // ✅ FIX: client_id bhejte hain email ki jagah

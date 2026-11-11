@@ -17,6 +17,7 @@ class InvoiceResponse(BaseModel):
     user_id: int
     client_id: int
     project_id: Optional[int] = None
+    project_name: Optional[str] = None
     invoice_number: str
     date_from: date
     date_to: date

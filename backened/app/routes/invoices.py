@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
@@ -87,7 +88,8 @@ def remove_invoice(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    invoice = delete_invoice(db, invoice_id, current_user.id)
+    with conflict_on_integrity(db, "This invoice could not be deleted because other records still depend on it."):
+        invoice = delete_invoice(db, invoice_id, current_user.id)
     if not invoice:
         raise HTTPException(status_code=404, detail="Invoice not found")
     return {"message": "Invoice deleted successfully"}

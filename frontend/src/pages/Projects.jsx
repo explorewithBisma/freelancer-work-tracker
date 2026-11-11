@@ -123,8 +123,8 @@ export default function Projects() {
       await deleteProject(id);
       setProjects(projects.filter(p => p.id !== id));
       setDeleteConfirm(null);
-    } catch {
-      alert("Failed to delete project");
+    } catch (err) {
+      alert(err.response?.data?.detail || "Failed to delete project");
     }
   };
 

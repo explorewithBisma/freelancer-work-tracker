@@ -5,7 +5,7 @@ class TimeEntry(Base):
     __tablename__ = "time_entries"
 
     id = Column(Integer, primary_key=True, index=True)
-    task_id = Column(Integer, ForeignKey("tasks.id"), nullable=False)
+    task_id = Column(Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False)
     
     # These MUST match the arguments we pass in time_entry_service.py
     duration_seconds = Column(Integer, nullable=False) 

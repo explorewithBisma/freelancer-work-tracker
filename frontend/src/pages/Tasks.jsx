@@ -153,7 +153,7 @@ export default function Tasks() {
       await deleteTask(id);
       setTasks(prev => prev.filter(t => t.id !== id));
       setDeleteConfirm(null);
-    } catch { alert("Delete failed."); }
+    } catch (err) { alert(err.response?.data?.detail || "Delete failed."); }
   };
 
   const openEdit = (task) => {
