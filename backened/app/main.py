@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 import logging
 import os
 
-from app.database import Base, engine
+from app.database import Base, engine, IS_VERCEL
 
 # Importing routers
 from app.routes.client_portal import router as client_portal_router
@@ -29,8 +29,13 @@ logger = logging.getLogger("app")
 async def lifespan(app: FastAPI):
     # Importing the routers above registers every model on Base.metadata.
     # create_all is idempotent (CREATE TABLE IF NOT EXISTS) and does not alter existing tables.
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables verified; Freelancer Work Tracker API ready")
+    if IS_VERCEL:
+        # Serverless cold starts: skip schema work. Create tables beforehand with
+        # `python create_tables.py` (or by running the app once locally).
+        logger.info("Running on Vercel; skipping create_all")
+    else:
+        Base.metadata.create_all(bind=engine)
+        logger.info("Database tables verified; Freelancer Work Tracker API ready")
     yield
 
 
