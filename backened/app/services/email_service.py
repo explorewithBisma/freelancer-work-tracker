@@ -1,16 +1,51 @@
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import logging
 import os
 
-MAIL_USERNAME = os.getenv("MAIL_USERNAME", "fwtapp860@gmail.com")
-MAIL_PASSWORD = os.getenv("MAIL_PASSWORD", "gnus ahfu tmfm bfon")
-MAIL_FROM     = os.getenv("MAIL_USERNAME", "fwtapp860@gmail.com")
-FRONTEND_URL  = os.getenv("FRONTEND_URL", "http://localhost:3000")
+import httpx
+
+logger = logging.getLogger("app.email")
+
+BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
-def send_reset_email(to_email: str, token: str):
-    reset_url = f"{FRONTEND_URL}/reset-password?token={token}"
+def _frontend_url() -> str:
+    # First entry if FRONTEND_URL is comma-separated; no trailing slash.
+    raw = os.getenv("FRONTEND_URL", "http://localhost:3000")
+    return raw.split(",")[0].strip().rstrip("/")
+
+
+def _send_email(to_email: str, subject: str, html: str) -> bool:
+    """Send via Brevo's HTTP API. Never raises; returns True on success."""
+    api_key = os.getenv("BREVO_API_KEY")
+    mail_from = os.getenv("MAIL_FROM")
+    if not api_key or not mail_from:
+        logger.error("Email not sent to %s: BREVO_API_KEY or MAIL_FROM is not set", to_email)
+        return False
+    payload = {
+        "sender": {"name": os.getenv("MAIL_FROM_NAME", "FWT App"), "email": mail_from},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html,
+    }
+    try:
+        resp = httpx.post(
+            BREVO_URL,
+            json=payload,
+            headers={"api-key": api_key, "accept": "application/json"},
+            timeout=10,
+        )
+        if resp.status_code >= 300:
+            logger.error("Brevo rejected email to %s: %s %s", to_email, resp.status_code, resp.text[:300])
+            return False
+    except Exception:
+        logger.exception("Brevo request failed for email to %s", to_email)
+        return False
+    logger.info("Email sent to %s", to_email)
+    return True
+
+
+def send_reset_email(to_email: str, token: str) -> bool:
+    reset_url = f"{_frontend_url()}/reset-password?token={token}"
 
     # ── HTML Email Template ──
     html = f"""
@@ -54,23 +89,11 @@ def send_reset_email(to_email: str, token: str):
     </html>
     """
 
-    # ── Build message ──
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = "🔑 Reset your FWT password"
-    msg["From"]    = f"FWT App <{MAIL_FROM}>"
-    msg["To"]      = to_email
-    msg.attach(MIMEText(html, "html"))
-
-    # ── Send via Gmail SMTP ──
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(MAIL_USERNAME, MAIL_PASSWORD)
-        server.sendmail(MAIL_FROM, to_email, msg.as_string())
-
-    print(f"✅ Reset email sent to {to_email}")
+    return _send_email(to_email, "🔑 Reset your FWT password", html)
 
 
-def send_client_portal_email(to_email: str, client_name: str, password: str, freelancer_name: str = "Your Freelancer"):
-    portal_url = f"{FRONTEND_URL}/client-login"
+def send_client_portal_email(to_email: str, client_name: str, password: str, freelancer_name: str = "Your Freelancer") -> bool:
+    portal_url = f"{_frontend_url()}/client-login"
 
     html = f"""
     <!DOCTYPE html>
@@ -132,14 +155,4 @@ def send_client_portal_email(to_email: str, client_name: str, password: str, fre
     </html>
     """
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"🔗 Your Client Portal Access — FWT"
-    msg["From"]    = f"FWT App <{MAIL_FROM}>"
-    msg["To"]      = to_email
-    msg.attach(MIMEText(html, "html"))
-
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as server:
-        server.login(MAIL_USERNAME, MAIL_PASSWORD)
-        server.sendmail(MAIL_FROM, to_email, msg.as_string())
-
-    print(f"✅ Client portal email sent to {to_email}")
+    return _send_email(to_email, "🔗 Your Client Portal Access — FWT", html)

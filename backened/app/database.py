@@ -7,17 +7,14 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise ValueError("DATABASE_URL not set in .env")
+    raise RuntimeError("DATABASE_URL environment variable is not set")
 
-# ✅ Railway fix: mysql:// → mysql+pymysql://
-if DATABASE_URL.startswith("mysql://"):
-    DATABASE_URL = DATABASE_URL.replace("mysql://", "mysql+pymysql://", 1)
-
-# Neon/Supabase hand out postgres:// by default; SQLAlchemy 1.4+ requires postgresql://
+# Neon/Heroku-style URLs use postgres://; SQLAlchemy requires postgresql://
 if DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-engine = create_engine(DATABASE_URL)
+# pool_pre_ping / pool_recycle: Neon suspends idle compute and drops connections.
+engine = create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=300)
 
 SessionLocal = sessionmaker(
     autocommit=False,

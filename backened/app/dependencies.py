@@ -35,7 +35,8 @@ def get_current_user(
         )
         user_id = payload.get("sub")
 
-        if user_id is None:
+        # User access tokens carry no purpose/role; reject client-portal and reset tokens.
+        if user_id is None or payload.get("purpose") or payload.get("role"):
             raise credentials_exception
 
     except JWTError:

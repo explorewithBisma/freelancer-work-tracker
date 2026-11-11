@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/chatwidget.css";
+import { API_BASE_URL } from "../api/config";
 
 const BotIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -30,7 +31,7 @@ const SUGGESTIONS = [
   "Give me a summary",
 ];
 
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = API_BASE_URL;
 
 export default function ClientChatWidget({ clientData }) {
   const [open, setOpen]         = useState(false);

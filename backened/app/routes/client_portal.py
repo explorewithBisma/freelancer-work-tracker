@@ -3,7 +3,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from jose import jwt, JWTError
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.dependencies import get_db, get_current_user
@@ -29,10 +29,12 @@ class ClientToken(BaseModel):
     access_token: str
     token_type: str
 
+CLIENT_PURPOSE = "client_portal"
+
 def create_client_token(client_id: int) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     return jwt.encode(
-        {"sub": str(client_id), "role": "client", "exp": expire},
+        {"sub": str(client_id), "role": "client", "purpose": CLIENT_PURPOSE, "exp": expire},
         settings.SECRET_KEY,
         algorithm=settings.ALGORITHM
     )
@@ -40,7 +42,7 @@ def create_client_token(client_id: int) -> str:
 def get_current_client(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        if payload.get("role") != "client":
+        if payload.get("role") != "client" or payload.get("purpose") != CLIENT_PURPOSE:
             raise HTTPException(status_code=403, detail="Not a client token")
         client_id = int(payload.get("sub"))
     except (JWTError, ValueError):

@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -10,7 +10,7 @@ from app.models.client import Client
 
 
 def get_dashboard_summary(db: Session, user_id: int):
-    today = datetime.utcnow().date()
+    today = datetime.now(timezone.utc).date()
 
     # ── Get user's project & task IDs ──
     user_project_ids = [

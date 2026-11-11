@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { API_BASE_URL } from "../api/config";
 
 const BotIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +47,7 @@ export default function LandingChatWidget() {
     setMessages(prev => [...prev, { from: "user", text: msg }]);
     setLoading(true);
     try {
-      const res = await fetch("http://localhost:8000/chat/landing-message", {
+      const res = await fetch(`${API_BASE_URL}/chat/landing-message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: msg }),

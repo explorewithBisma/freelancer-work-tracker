@@ -1,8 +1,12 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import logging
 import os
+
+from app.database import Base, engine
 
 # Importing routers
 from app.routes.client_portal import router as client_portal_router
@@ -13,26 +17,44 @@ from app.routes import projects, tasks, time_entries, invoices, conversations, m
 from app.routes.chat import router as chat_router
 from app.routes import settings
 
+# --- LOGGING ---
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
+logger = logging.getLogger("app")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Importing the routers above registers every model on Base.metadata.
+    # create_all is idempotent (CREATE TABLE IF NOT EXISTS) and does not alter existing tables.
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables verified; Freelancer Work Tracker API ready")
+    yield
+
+
 app = FastAPI(
     title="Freelancer Work Tracker API",
     description="Backend API for authentication, clients, projects, invoices, and time tracking.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # --- CORS CONFIGURATION ---
-# ✅ Railway + Local both supported
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
-
-ALLOWED_ORIGINS = [
+# FRONTEND_URL may be comma-separated (e.g. production + preview URLs).
+_dev_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    FRONTEND_URL,  # ✅ Railway frontend URL from env
 ]
-
-# Remove duplicates
-ALLOWED_ORIGINS = list(set(ALLOWED_ORIGINS))
+_env_origins = [
+    o.strip().rstrip("/")
+    for o in os.getenv("FRONTEND_URL", "").split(",")
+    if o.strip()
+]
+ALLOWED_ORIGINS = list(dict.fromkeys(_env_origins + _dev_origins))
 
 app.add_middleware(
     CORSMiddleware,
@@ -42,29 +64,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ✅ Custom 500 handler — CORS headers on crashes too
+
+# Custom 500 handler: log details server-side, return a generic message.
+# CORS headers are added only for allowed origins (so browsers can read the error).
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    origin = request.headers.get("origin", "http://localhost:3000")
-    return JSONResponse(
-        status_code=500,
-        content={"detail": f"Internal server error: {str(exc)}"},
-        headers={
-            "Access-Control-Allow-Origin": origin if origin in ALLOWED_ORIGINS else "http://localhost:3000",
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    headers = {}
+    origin = request.headers.get("origin")
+    if origin in ALLOWED_ORIGINS:
+        headers = {
+            "Access-Control-Allow-Origin": origin,
             "Access-Control-Allow-Credentials": "true",
         }
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+        headers=headers,
     )
 
-# --- LOGGING ---
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger("app")
-
-@app.on_event("startup")
-async def startup():
-    logger.info("🚀 Freelancer Work Tracker API started and ready for requests")
 
 @app.get("/")
 def root():
@@ -75,7 +93,7 @@ def root():
     }
 
 # --- ROUTES REGISTRATION ---
-app.include_router(health_router,        prefix="/health",        tags=["Health"])
+app.include_router(health_router,                         tags=["Health"])
 app.include_router(auth_router,          prefix="/auth",          tags=["Auth"])
 app.include_router(clients_router)
 app.include_router(client_portal_router, prefix="/client-portal", tags=["Client Portal"])

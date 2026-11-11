@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date, timedelta
+from functools import lru_cache
 from groq import Groq
 import os
 
@@ -16,7 +17,21 @@ from app.models.client import Client
 
 router = APIRouter(tags=["Chatbot"])
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+
+@lru_cache(maxsize=1)
+def _build_groq_client(api_key: str) -> Groq:
+    return Groq(api_key=api_key)
+
+
+def get_groq_client() -> Groq:
+    """Created lazily so a missing GROQ_API_KEY doesn't crash the app at import."""
+    api_key = os.getenv("GROQ_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=503, detail="AI assistant is unavailable: GROQ_API_KEY is not configured on the server.")
+    return _build_groq_client(api_key)
+
+
 MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
 
 
@@ -67,6 +82,7 @@ def build_freelancer_context(db, user_id):
 
 @router.post("/message")
 def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+    groq_client = get_groq_client()
     try:
         context = build_freelancer_context(db, current_user.id)
         response = groq_client.chat.completions.create(
@@ -86,6 +102,7 @@ def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_us
 
 @router.post("/client-message")
 def client_chat_message(payload: ClientChatRequest):
+    groq_client = get_groq_client()
     try:
         user_question = payload.message.split("[USER QUESTION]")[-1].strip() if "[USER QUESTION]" in payload.message else payload.message
         response = groq_client.chat.completions.create(
@@ -105,6 +122,7 @@ def client_chat_message(payload: ClientChatRequest):
 
 @router.post("/landing-message")
 async def landing_chat(request: Request):
+    groq_client = get_groq_client()
     try:
         body = await request.json()
         user_message = body.get("message", "")
@@ -113,7 +131,7 @@ async def landing_chat(request: Request):
         response = groq_client.chat.completions.create(
             model=MODEL,
             messages=[
-                {"role": "system", "content": "You are FWT Assistant for Freelancer Work Tracker. Features: Project & Task Management, Time Tracking, Invoice Generation, Client Portal, AI Chatbot, Dashboard. FWT is FREE. Stack: React + FastAPI + MySQL. Be warm, friendly, concise. Keep under 4 sentences."},
+                {"role": "system", "content": "You are FWT Assistant for Freelancer Work Tracker. Features: Project & Task Management, Time Tracking, Invoice Generation, Client Portal, AI Chatbot, Dashboard. FWT is FREE. Stack: React + FastAPI + PostgreSQL. Be warm, friendly, concise. Keep under 4 sentences."},
                 {"role": "user", "content": user_message}
             ],
             max_tokens=200

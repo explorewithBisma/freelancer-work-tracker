@@ -5,8 +5,8 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 #tool of sqlalchemy for transaction with db like read and write 
 from pydantic import BaseModel, EmailStr
-import secrets, hashlib
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime, timedelta, timezone
 from jose import jwt, JWTError
 
 from app.dependencies import get_db
@@ -18,6 +18,7 @@ from app.services.email_service import send_reset_email
 from app.config import settings
 from app.models.user import User
 
+logger = logging.getLogger("app.auth")
 router = APIRouter(tags=["Auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
@@ -31,7 +32,20 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
-_reset_tokens: dict = {}
+RESET_PURPOSE = "password_reset"
+RESET_TOKEN_MINUTES = 30
+
+
+def _create_reset_token(user: User) -> str:
+    # Embeds a slice of the current password hash so the token stops working
+    # once the password changes (single use).
+    claims = {
+        "sub": str(user.id),
+        "purpose": RESET_PURPOSE,
+        "pwd": user.password_hash[-10:],
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=RESET_TOKEN_MINUTES),
+    }
+    return jwt.encode(claims, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
@@ -56,6 +70,8 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("purpose") or payload.get("role"):
+            raise ValueError("not an access token")
         user_id = int(payload.get("sub"))
     except (JWTError, ValueError, TypeError):
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -67,36 +83,32 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 
 @router.post("/forgot-password", status_code=200)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    generic = {"message": "If this email is registered, a reset link has been sent."}
     user = get_user_by_email(db, payload.email)
     if not user:
-        return {"message": "If this email is registered, a reset link has been sent."}
-    raw_token = secrets.token_urlsafe(32)
-    token_hash = hashlib.sha256(raw_token.encode()).hexdigest()
-    _reset_tokens[token_hash] = {
-        "email": payload.email,
-        "expires_at": datetime.utcnow() + timedelta(minutes=15)
-    }
+        return generic
     try:
-        send_reset_email(payload.email, raw_token)
-    except Exception as e:
-        print(f"Email sending failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to send email. Try again later.")
-    return {"message": "If this email is registered, a reset link has been sent."}
+        send_reset_email(payload.email, _create_reset_token(user))
+    except Exception:
+        logger.exception("Reset email failed for %s", payload.email)
+    return generic
 
 
 @router.post("/reset-password", status_code=200)
 def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db)):
-    token_hash = hashlib.sha256(payload.token.encode()).hexdigest()
-    token_data = _reset_tokens.get(token_hash)
-    if not token_data:
-        raise HTTPException(status_code=400, detail="Invalid or expired reset token")
-    if datetime.utcnow() > token_data["expires_at"]:
-        del _reset_tokens[token_hash]
-        raise HTTPException(status_code=400, detail="Reset token has expired. Request a new one.")
-    user = get_user_by_email(db, token_data["email"])
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
+    invalid = HTTPException(status_code=400, detail="Invalid or expired reset token")
+    try:
+        claims = jwt.decode(payload.token, SECRET_KEY, algorithms=[ALGORITHM])
+    except JWTError:
+        raise invalid
+    if claims.get("purpose") != RESET_PURPOSE:
+        raise invalid
+    try:
+        user = get_user_by_id(db, int(claims.get("sub")))
+    except (TypeError, ValueError):
+        raise invalid
+    if not user or claims.get("pwd") != user.password_hash[-10:]:
+        raise invalid
     user.password_hash = hash_password(payload.new_password)
     db.commit()
-    del _reset_tokens[token_hash]
     return {"message": "Password reset successfully! You can now login with your new password."}
