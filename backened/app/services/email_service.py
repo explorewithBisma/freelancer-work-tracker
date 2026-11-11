@@ -1,3 +1,4 @@
+import html as html_lib
 import logging
 import os
 
@@ -8,7 +9,7 @@ logger = logging.getLogger("app.email")
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
-def _frontend_url() -> str:
+def frontend_url() -> str:
     # First entry if FRONTEND_URL is comma-separated; no trailing slash.
     raw = os.getenv("FRONTEND_URL", "http://localhost:3000")
     return raw.split(",")[0].strip().rstrip("/")
@@ -45,7 +46,7 @@ def _send_email(to_email: str, subject: str, html: str) -> bool:
 
 
 def send_reset_email(to_email: str, token: str) -> bool:
-    reset_url = f"{_frontend_url()}/reset-password?token={token}"
+    reset_url = f"{frontend_url()}/reset-password?token={token}"
 
     # ── HTML Email Template ──
     html = f"""
@@ -92,8 +93,12 @@ def send_reset_email(to_email: str, token: str) -> bool:
     return _send_email(to_email, "🔑 Reset your FWT password", html)
 
 
-def send_client_portal_email(to_email: str, client_name: str, password: str, freelancer_name: str = "Your Freelancer") -> bool:
-    portal_url = f"{_frontend_url()}/client-login"
+def send_client_portal_email(to_email: str, client_name: str, set_password_url: str,
+                             freelancer_name: str = "Your Freelancer") -> bool:
+    """Invitation email with a one-time 'Set your password' link. Never contains a password."""
+    portal_url = f"{frontend_url()}/client-login"
+    client_name = html_lib.escape(client_name or "")
+    freelancer_name = html_lib.escape(freelancer_name or "Your Freelancer")
 
     html = f"""
     <!DOCTYPE html>
@@ -109,13 +114,8 @@ def send_client_portal_email(to_email: str, client_name: str, password: str, fre
         .body {{ padding: 36px 40px; }}
         .body h2 {{ color: #1a1040; font-size: 20px; margin: 0 0 12px; }}
         .body p {{ color: #64748b; font-size: 14px; line-height: 1.7; margin: 0 0 16px; }}
-        .credentials {{ background: #f0faf9; border: 1px solid rgba(29,120,116,0.20); border-radius: 14px; padding: 18px 20px; margin: 0 0 24px; }}
-        .cred-row {{ display: flex; gap: 12px; margin-bottom: 10px; font-size: 14px; }}
-        .cred-row:last-child {{ margin-bottom: 0; }}
-        .cred-label {{ font-weight: 700; color: #1d7874; min-width: 80px; }}
-        .cred-value {{ color: #1a1040; font-weight: 600; }}
         .btn {{ display: block; width: fit-content; margin: 0 auto 24px; background: linear-gradient(90deg, #1d7874, #2a9d8f); color: white; text-decoration: none; padding: 14px 36px; border-radius: 999px; font-weight: 700; font-size: 15px; }}
-        .note {{ background: #f6f4ff; border: 1px solid rgba(124,58,237,0.15); border-radius: 12px; padding: 14px 18px; font-size: 12.5px; color: #6b5fa0; }}
+        .note {{ background: #f6f4ff; border: 1px solid rgba(124,58,237,0.15); border-radius: 12px; padding: 14px 18px; font-size: 12.5px; color: #6b5fa0; margin-bottom: 12px; }}
         .footer {{ background: #f8f7ff; padding: 20px 40px; text-align: center; font-size: 12px; color: #a09bbf; border-top: 1px solid #ede9fe; }}
       </style>
     </head>
@@ -127,24 +127,14 @@ def send_client_portal_email(to_email: str, client_name: str, password: str, fre
         </div>
         <div class="body">
           <h2>Hello, {client_name}!</h2>
-          <p><strong>{freelancer_name}</strong> has given you access to track your project progress, tasks, and invoices on the FWT Client Portal.</p>
-          <div class="credentials">
-            <div class="cred-row">
-              <span class="cred-label">Portal URL</span>
-              <span class="cred-value">{portal_url}</span>
-            </div>
-            <div class="cred-row">
-              <span class="cred-label">Email</span>
-              <span class="cred-value">{to_email}</span>
-            </div>
-            <div class="cred-row">
-              <span class="cred-label">Password</span>
-              <span class="cred-value">{password}</span>
-            </div>
-          </div>
-          <a href="{portal_url}" class="btn">Access My Portal →</a>
+          <p><strong>{freelancer_name}</strong> has invited you to the FWT Client Portal, where you can follow your project progress, tasks, hours logged and invoices.</p>
+          <p>To get started, set your password using the button below. Your login email is <strong>{html_lib.escape(to_email)}</strong>.</p>
+          <a href="{set_password_url}" class="btn">Set your password →</a>
           <div class="note">
-            You can view your project progress, completed tasks, hours logged, and invoices. Please keep your credentials safe.
+            ⏳ This link expires in <strong>24 hours</strong> and can be used only once. If it expires, ask {freelancer_name} to send a new invitation.
+          </div>
+          <div class="note">
+            After setting your password, sign in any time at <a href="{portal_url}">{portal_url}</a>.
           </div>
         </div>
         <div class="footer">
@@ -155,4 +145,4 @@ def send_client_portal_email(to_email: str, client_name: str, password: str, fre
     </html>
     """
 
-    return _send_email(to_email, "🔗 Your Client Portal Access — FWT", html)
+    return _send_email(to_email, "🔗 Set up your Client Portal access — FWT", html)

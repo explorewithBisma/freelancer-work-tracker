@@ -39,7 +39,6 @@ export default function ClientDetail() {
 
   // ✅ Portal Access Modal state
   const [showPortalModal, setShowPortalModal] = useState(false);
-  const [portalPassword, setPortalPassword]   = useState("");
   const [portalLoading, setPortalLoading]     = useState(false);
   const [portalMsg, setPortalMsg]             = useState(null); // {type: "success"|"error", text}
 
@@ -64,27 +63,23 @@ export default function ClientDetail() {
     load();
   }, [id]);
 
-  // ✅ Portal Access handler — client_id bhejta hai email nahi
+  // Sends a one-time "set your password" invitation; no password is typed or emailed.
   const handlePortalAccess = async () => {
-    if (!portalPassword.trim()) {
-      setPortalMsg({ type: "error", text: "Password enter karo!" });
-      return;
-    }
     setPortalLoading(true);
     setPortalMsg(null);
     try {
-      await api.post("/client-portal/set-password", {
-        client_id: Number(id),   // ✅ client_id — exact client milega
-        password:  portalPassword,
-      });
-      setPortalMsg({ type: "success", text: `✅ Portal access email ${client.email} pe bhej diya gaya!` });
-      setPortalPassword("");
-      setTimeout(() => {
-        setShowPortalModal(false);
-        setPortalMsg(null);
-      }, 2500);
+      const res = await api.post("/client-portal/invite", { client_id: Number(id) });
+      if (res.data?.email_sent) {
+        setPortalMsg({ type: "success", text: `✅ ${res.data.message}` });
+        setTimeout(() => {
+          setShowPortalModal(false);
+          setPortalMsg(null);
+        }, 2500);
+      } else {
+        setPortalMsg({ type: "error", text: res.data?.message || "Could not send the invitation." });
+      }
     } catch (err) {
-      setPortalMsg({ type: "error", text: err.response?.data?.detail || "Failed to set portal access." });
+      setPortalMsg({ type: "error", text: err.response?.data?.detail || "Could not send the invitation." });
     } finally {
       setPortalLoading(false);
     }
@@ -102,24 +97,13 @@ export default function ClientDetail() {
 
       {/* ✅ Portal Access Modal */}
       {showPortalModal && (
-        <div className="pj-modal-overlay" onClick={() => { setShowPortalModal(false); setPortalMsg(null); setPortalPassword(""); }}>
+        <div className="pj-modal-overlay" onClick={() => { setShowPortalModal(false); setPortalMsg(null); }}>
           <div className="pj-modal" onClick={e => e.stopPropagation()}>
             <div style={{ fontSize: 32, marginBottom: 8 }}>🔐</div>
-            <h3>Grant Portal Access</h3>
+            <h3>Invite to Client Portal</h3>
             <p style={{ fontSize: 13, color: "#7c6faa", marginBottom: 16 }}>
-              Set a password for <strong>{client.name}</strong> — they will receive login details at <strong>{client.email}</strong>
+              Send <strong>{client.name}</strong> a secure link to set their own password — it goes to <strong>{client.email || "(no email on file)"}</strong>
             </p>
-            <input
-              type="password"
-              placeholder="Set portal password"
-              value={portalPassword}
-              onChange={e => setPortalPassword(e.target.value)}
-              style={{
-                width: "100%", padding: "10px 14px", borderRadius: 10,
-                border: "1.5px solid #e2d9f3", fontSize: 14, marginBottom: 12,
-                outline: "none", boxSizing: "border-box"
-              }}
-            />
             {portalMsg && (
               <p style={{
                 fontSize: 13, marginBottom: 12, padding: "8px 12px", borderRadius: 8,
@@ -130,7 +114,7 @@ export default function ClientDetail() {
               </p>
             )}
             <div className="pj-modal-actions">
-              <button className="pj-modal-cancel" onClick={() => { setShowPortalModal(false); setPortalMsg(null); setPortalPassword(""); }}>
+              <button className="pj-modal-cancel" onClick={() => { setShowPortalModal(false); setPortalMsg(null); }}>
                 Cancel
               </button>
               <button
@@ -139,7 +123,7 @@ export default function ClientDetail() {
                 disabled={portalLoading}
                 style={{ background: "linear-gradient(135deg, #7c3aed, #ec4899)" }}
               >
-                {portalLoading ? "Sending..." : "Send Access"}
+                {portalLoading ? "Sending..." : "Send Invitation"}
               </button>
             </div>
           </div>

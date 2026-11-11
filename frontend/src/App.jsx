@@ -14,6 +14,7 @@ import Clients from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail";
 import Settings from "./pages/Settings";
 import ResetPassword from "./pages/ResetPassword";
+import ClientSetPassword from "./pages/ClientSetPassword";
 import ClientLogin  from "./pages/clientlogin";
 import ClientPortal from "./pages/clientportal";
 
@@ -31,6 +32,7 @@ export default function App() {
 
         {/* Client Portal */}
         <Route path="/client-login"  element={<ClientLogin />} />
+        <Route path="/client-set-password" element={<ClientSetPassword />} />
         <Route path="/client-portal" element={<ClientPortal />} />
 
         {/* Protected Routes */}

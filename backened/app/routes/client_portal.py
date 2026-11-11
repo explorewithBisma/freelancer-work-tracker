@@ -5,6 +5,7 @@ from pydantic import BaseModel, EmailStr
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import logging
 
 from app.dependencies import get_db, get_current_user
 from app.models.client import Client
@@ -13,17 +14,42 @@ from app.models.task import Task
 from app.models.time_entry import TimeEntry
 from app.models.invoice import Invoice
 from app.services.auth_service import verify_password, hash_password
-from app.services.email_service import send_client_portal_email
+from app.services.email_service import send_client_portal_email, frontend_url
 from app.config import settings
 
+logger = logging.getLogger("app.client_portal")
 router = APIRouter(tags=["Client Portal"])
+
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/client-portal/login")
 
 # ✅ FIX: client_id use karo email ki jagah
-class ClientSetPassword(BaseModel):
+class ClientInvite(BaseModel):
     client_id: int
+
+class ClientSetPasswordWithToken(BaseModel):
+    token: str
     password: str
+
+SET_PASSWORD_PURPOSE = "client_set_password"
+SET_PASSWORD_HOURS = 24
+MIN_PASSWORD_LENGTH = 8
+
+
+def _pwd_marker(client: Client) -> str:
+    # Ties a token to the client's current password. Once the password is set,
+    # the marker changes and the token stops working (single use).
+    return (client.password_hash or "")[-10:]
+
+
+def create_set_password_token(client: Client) -> str:
+    claims = {
+        "sub": str(client.id),
+        "purpose": SET_PASSWORD_PURPOSE,
+        "pwd": _pwd_marker(client),
+        "exp": datetime.now(timezone.utc) + timedelta(hours=SET_PASSWORD_HOURS),
+    }
+    return jwt.encode(claims, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 class ClientToken(BaseModel):
     access_token: str
@@ -54,37 +80,69 @@ def get_current_client(token: str = Depends(oauth2_scheme), db: Session = Depend
 
 
 # ════════════════════════════════
-# SET PASSWORD — client_id se exact client dhundo
-# ✅ FIX: Same email wale multiple clients mein se sahi wala milega
+# INVITE — freelancer sends a one-time "set your password" link (no password is ever emailed)
 # ════════════════════════════════
-@router.post("/set-password", status_code=200)
-def set_client_password(
-    payload: ClientSetPassword,
+@router.post("/invite", status_code=200)
+def invite_client(
+    payload: ClientInvite,
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user)
 ):
-    # ✅ client_id + user_id dono match — exact client milega
     client = db.query(Client).filter(
         Client.id == payload.client_id,
         Client.user_id == current_user.id
     ).first()
-
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
+    if not client.email:
+        raise HTTPException(status_code=400, detail="This client has no email address. Add one first.")
+
+    token = create_set_password_token(client)
+    set_password_url = f"{frontend_url()}/client-set-password?token={token}"
+
+    email_sent = False
+    try:
+        email_sent = send_client_portal_email(
+            to_email         = client.email,
+            client_name      = client.name,
+            set_password_url = set_password_url,
+            freelancer_name  = current_user.full_name,
+        )
+    except Exception:
+        logger.exception("Portal invitation email failed for client %s", client.id)
+
+    message = (
+        f"Invitation sent to {client.email}."
+        if email_sent else
+        f"Could not send the email to {client.email}. Check the email settings and try again."
+    )
+    return {"message": message, "email_sent": email_sent}
+
+
+# ════════════════════════════════
+# SET PASSWORD WITH TOKEN — public; the client follows the emailed link
+# ════════════════════════════════
+@router.post("/set-password-with-token", status_code=200)
+def set_password_with_token(payload: ClientSetPasswordWithToken, db: Session = Depends(get_db)):
+    invalid = HTTPException(status_code=400, detail="Invalid or expired link. Ask your freelancer to send a new invitation.")
+    if len(payload.password) < MIN_PASSWORD_LENGTH:
+        raise HTTPException(status_code=400, detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters.")
+    try:
+        claims = jwt.decode(payload.token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+    except JWTError:
+        raise invalid
+    if claims.get("purpose") != SET_PASSWORD_PURPOSE:
+        raise invalid
+    try:
+        client = db.query(Client).filter(Client.id == int(claims.get("sub"))).first()
+    except (TypeError, ValueError):
+        raise invalid
+    if not client or claims.get("pwd") != _pwd_marker(client):
+        raise invalid
 
     client.password_hash = hash_password(payload.password)
     db.commit()
-
-    try:
-        send_client_portal_email(
-            to_email    = client.email,
-            client_name = client.name,
-            password    = payload.password,
-        )
-    except Exception as e:
-        print(f"⚠️ Portal email failed: {e}")
-
-    return {"message": f"Password set for {client.name}. Portal access email sent to {client.email}."}
+    return {"message": "Password set. You can now sign in to the client portal."}
 
 
 # ════════════════════════════════

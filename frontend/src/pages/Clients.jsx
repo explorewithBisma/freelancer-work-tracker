@@ -27,7 +27,6 @@ export default function Clients() {
   const [editClient, setEditClient]         = useState(null);
   const [deleteConfirm, setDeleteConfirm]   = useState(null);
   const [portalClient, setPortalClient]     = useState(null);
-  const [portalPassword, setPortalPassword] = useState("");
   const [portalMsg, setPortalMsg]           = useState("");
   const [portalLoading, setPortalLoading]   = useState(false);
   const [search, setSearch]                 = useState("");
@@ -80,20 +79,16 @@ export default function Clients() {
     } catch (err) { alert(err.response?.data?.detail || "Failed to delete client."); }
   };
 
-  // ✅ FIX: client_id bhejte hain email ki jagah
-  const handleSetPortalPassword = async (e) => {
+  // Sends a one-time "set your password" invitation; no password is typed or emailed.
+  const handleSendInvite = async (e) => {
     e.preventDefault();
     if (!portalClient?.id) return alert("Client not found.");
     setPortalLoading(true);
     try {
-      await api.post("/client-portal/set-password", {
-        client_id: portalClient.id,   // ✅ exact client — no clash
-        password:  portalPassword,
-      });
-      setPortalMsg(`✅ Portal access set for ${portalClient.name}! Login details sent to ${portalClient.email}`);
-      setPortalPassword("");
+      const res = await api.post("/client-portal/invite", { client_id: portalClient.id });
+      setPortalMsg(res.data?.email_sent ? `✅ ${res.data.message}` : `Failed: ${res.data?.message || "Could not send the invitation."}`);
     } catch (err) {
-      setPortalMsg(`Failed: ${err.response?.data?.detail || "Could not set password."}`);
+      setPortalMsg(`Failed: ${err.response?.data?.detail || "Could not send the invitation."}`);
     } finally { setPortalLoading(false); }
   };
 
@@ -106,7 +101,7 @@ export default function Clients() {
   const openNew = () => { setEditClient(null); setFormData(emptyForm); setShowForm(true); };
   const openPortal = (e, client) => {
     e.stopPropagation();
-    setPortalClient(client); setPortalPassword(""); setPortalMsg("");
+    setPortalClient(client); setPortalMsg("");
   };
   const confirmDelete = (e, id) => {
     e.stopPropagation();
@@ -269,22 +264,18 @@ export default function Clients() {
         <div className="cl-modal-overlay" onClick={() => setPortalClient(null)}>
           <div className="cl-modal" onClick={e => e.stopPropagation()}>
             <div className="cl-modal-icon">{Icons.lock}</div>
-            <h3>Set Portal Access</h3>
-            <p>Set a password for <strong>{portalClient.name}</strong> so they can login to the client portal.</p>
+            <h3>Invite to Client Portal</h3>
+            <p>Send <strong>{portalClient.name}</strong> a secure link to set their own password and log in to the client portal. The invitation goes to <strong>{portalClient.email || "(no email on file)"}</strong>.</p>
             {portalMsg ? (
               <div className={`cl-portal-msg ${portalMsg.startsWith("✅") ? "success" : "error"}`}>
                 {portalMsg}
               </div>
             ) : (
-              <form onSubmit={handleSetPortalPassword}>
-                <input type="password" className="cl-portal-input"
-                  placeholder="Set a password for client"
-                  value={portalPassword} onChange={e => setPortalPassword(e.target.value)}
-                  required minLength={6}/>
+              <form onSubmit={handleSendInvite}>
                 <div className="cl-modal-btns" style={{marginTop: 14}}>
                   <button type="button" className="cl-modal-cancel" onClick={() => setPortalClient(null)}>Cancel</button>
                   <button type="submit" className="cl-modal-confirm" disabled={portalLoading}>
-                    {portalLoading ? "Setting…" : "Set Password"}
+                    {portalLoading ? "Sending…" : "Send Invitation"}
                   </button>
                 </div>
               </form>

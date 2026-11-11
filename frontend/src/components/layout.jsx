@@ -29,9 +29,9 @@ export default function Layout() {
   const navigate  = useNavigate();
   const { isAuth, logout, user } = useAuth();
 
-  const noSidebarPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
+  const noSidebarPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/client-set-password"];
   const isLandingPage  = location.pathname === "/";
-  const isClientPortal = location.pathname === "/client-portal" || location.pathname === "/client-login";
+  const isClientPortal = location.pathname === "/client-portal" || location.pathname === "/client-login" || location.pathname === "/client-set-password";
   const showSidebar    = isAuth && !noSidebarPaths.includes(location.pathname);
   const showTopbar     = !isClientPortal;
 
