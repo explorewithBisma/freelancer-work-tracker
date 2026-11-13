@@ -85,7 +85,7 @@ export default function Clients() {
     if (!portalClient?.id) return alert("Client not found.");
     setPortalLoading(true);
     try {
-      const res = await api.post("/client-portal/invite", { client_id: portalClient.id });
+      const res = await api.post(`/clients/${portalClient.id}/portal-invite`);
       setPortalMsg(res.data?.email_sent ? `✅ ${res.data.message}` : `Failed: ${res.data?.message || "Could not send the invitation."}`);
     } catch (err) {
       setPortalMsg(`Failed: ${err.response?.data?.detail || "Could not send the invitation."}`);

@@ -3,12 +3,16 @@ from app.errors import conflict_on_integrity
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 from typing import Optional
+import logging
 
 from app.dependencies import get_db, get_current_user
 from app.schemas.client import ClientCreate, ClientOut
 from app.services.client_service import create_client, get_clients, get_client, delete_client
 from app.models.client import Client
+from app.routes.client_portal import create_set_password_token
+from app.services.email_service import send_client_portal_email, frontend_url
 
+logger = logging.getLogger("app.clients")
 router = APIRouter(prefix="/clients", tags=["Clients"])
 
 
@@ -83,3 +87,43 @@ def remove_client(
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return {"message": "Client deleted successfully"}
+
+
+# FREELANCER endpoint: emails the client a one-time "set your password" link.
+# Lives under /clients (freelancer session). /client-portal/* is reserved for
+# the client session and public client calls. No password is ever emailed.
+@router.post("/{client_id}/portal-invite", status_code=200)
+def invite_client_to_portal(
+    client_id: int,
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    client = db.query(Client).filter(
+        Client.id == client_id,
+        Client.user_id == current_user.id
+    ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    if not client.email:
+        raise HTTPException(status_code=400, detail="This client has no email address. Add one first.")
+
+    token = create_set_password_token(client)
+    set_password_url = f"{frontend_url()}/client-set-password?token={token}"
+
+    email_sent = False
+    try:
+        email_sent = send_client_portal_email(
+            to_email         = client.email,
+            client_name      = client.name,
+            set_password_url = set_password_url,
+            freelancer_name  = current_user.full_name,
+        )
+    except Exception:
+        logger.exception("Portal invitation email failed for client %s", client.id)
+
+    message = (
+        f"Invitation sent to {client.email}."
+        if email_sent else
+        f"Could not send the email to {client.email}. Check the email settings and try again."
+    )
+    return {"message": message, "email_sent": email_sent}

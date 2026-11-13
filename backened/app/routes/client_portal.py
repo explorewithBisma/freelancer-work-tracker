@@ -6,28 +6,22 @@ from pydantic import BaseModel, EmailStr
 from jose import jwt, JWTError
 from datetime import datetime, timedelta, timezone
 from typing import Optional
-import logging
 
-from app.dependencies import get_db, get_current_user
+from app.dependencies import get_db
 from app.models.client import Client
 from app.models.project import Project
 from app.models.task import Task
 from app.models.time_entry import TimeEntry
 from app.models.invoice import Invoice
 from app.services.auth_service import verify_password, hash_password
-from app.services.email_service import send_client_portal_email, frontend_url
 from app.config import settings
 
-logger = logging.getLogger("app.client_portal")
 router = APIRouter(tags=["Client Portal"])
 
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/client-portal/login")
 
 # ✅ FIX: client_id use karo email ki jagah
-class ClientInvite(BaseModel):
-    client_id: int
-
 class ClientSetPasswordWithToken(BaseModel):
     token: str
     password: str
@@ -78,46 +72,6 @@ def get_current_client(token: str = Depends(oauth2_scheme), db: Session = Depend
     if not client:
         raise HTTPException(status_code=404, detail="Client not found")
     return client
-
-
-# ════════════════════════════════
-# INVITE — freelancer sends a one-time "set your password" link (no password is ever emailed)
-# ════════════════════════════════
-@router.post("/invite", status_code=200)
-def invite_client(
-    payload: ClientInvite,
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user)
-):
-    client = db.query(Client).filter(
-        Client.id == payload.client_id,
-        Client.user_id == current_user.id
-    ).first()
-    if not client:
-        raise HTTPException(status_code=404, detail="Client not found")
-    if not client.email:
-        raise HTTPException(status_code=400, detail="This client has no email address. Add one first.")
-
-    token = create_set_password_token(client)
-    set_password_url = f"{frontend_url()}/client-set-password?token={token}"
-
-    email_sent = False
-    try:
-        email_sent = send_client_portal_email(
-            to_email         = client.email,
-            client_name      = client.name,
-            set_password_url = set_password_url,
-            freelancer_name  = current_user.full_name,
-        )
-    except Exception:
-        logger.exception("Portal invitation email failed for client %s", client.id)
-
-    message = (
-        f"Invitation sent to {client.email}."
-        if email_sent else
-        f"Could not send the email to {client.email}. Check the email settings and try again."
-    )
-    return {"message": message, "email_sent": email_sent}
 
 
 # ════════════════════════════════

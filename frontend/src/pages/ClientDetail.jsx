@@ -68,7 +68,7 @@ export default function ClientDetail() {
     setPortalLoading(true);
     setPortalMsg(null);
     try {
-      const res = await api.post("/client-portal/invite", { client_id: Number(id) });
+      const res = await api.post(`/clients/${id}/portal-invite`);
       if (res.data?.email_sent) {
         setPortalMsg({ type: "success", text: `✅ ${res.data.message}` });
         setTimeout(() => {
