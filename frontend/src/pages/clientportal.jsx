@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import portalApi from "../api/portalAxios";
+import { getClientToken, clearClientToken } from "../auth/clientSession";
 import "./clientportal.css";
 import ClientChatWidget from "./ClientChatWidget";
 
@@ -11,20 +12,18 @@ export default function ClientPortal() {
   const [error, setError]     = useState("");
   const [pdfInvoice, setPdfInvoice] = useState(null);
 
-  const token = localStorage.getItem("client_token");
+  const token = getClientToken();
 
   useEffect(() => {
     if (!token) { navigate("/client-login"); return; }
-    api.get("/client-portal/dashboard", {
-      headers: { Authorization: `Bearer ${token}` }
-    })
+    portalApi.get("/client-portal/dashboard")
       .then(res => setData(res.data))
-      .catch(() => { setError("Session expired. Please login again."); localStorage.removeItem("client_token"); })
+      .catch(() => { setError("Session expired. Please login again."); clearClientToken(); })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const logout = () => { localStorage.removeItem("client_token"); navigate("/client-login"); };
+  const logout = () => { clearClientToken(); navigate("/client-login", { replace: true }); };
 
   const statusColor = (s) => s === "active" ? "green" : s === "completed" ? "blue" : "orange";
   const statusLabel = (s) => s === "active" ? "Active" : s === "completed" ? "Completed" : "On Hold";

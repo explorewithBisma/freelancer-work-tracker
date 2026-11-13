@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import "./layout.css";
 import { useAuth } from "../auth/AuthContext";
 import ChatWidget from "./ChatWidget";
+import { isClientAreaPath } from "../auth/clientSession";
 
 const SideIcons = {
   dashboard: <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>,
@@ -29,11 +30,12 @@ export default function Layout() {
   const navigate  = useNavigate();
   const { isAuth, logout, user } = useAuth();
 
-  const noSidebarPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password", "/client-set-password"];
+  const noSidebarPaths = ["/", "/login", "/register", "/forgot-password", "/reset-password"];
   const isLandingPage  = location.pathname === "/";
-  const isClientPortal = location.pathname === "/client-portal" || location.pathname === "/client-login" || location.pathname === "/client-set-password";
-  const showSidebar    = isAuth && !noSidebarPaths.includes(location.pathname);
-  const showTopbar     = !isClientPortal;
+  // Client portal pages never get the freelancer shell (sidebar / chat widget / top bar)
+  const isClientArea   = isClientAreaPath(location.pathname);
+  const showSidebar    = isAuth && !isClientArea && !noSidebarPaths.includes(location.pathname);
+  const showTopbar     = !isClientArea;
 
   const handleLogout = () => { logout(); navigate("/login", { replace: true }); };
 

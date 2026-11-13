@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/chatwidget.css";
 import { API_BASE_URL } from "../api/config";
+import { getClientToken } from "../auth/clientSession";
 
 const BotIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -84,7 +85,7 @@ export default function ClientChatWidget({ clientData }) {
       const clientContext = buildClientContext();
       const enrichedMessage = `[CLIENT PORTAL CONTEXT]\n${clientContext}\n[USER QUESTION]\n${msg}`;
 
-      const token = localStorage.getItem("client_token");
+      const token = getClientToken();
       const res = await fetch(`${BACKEND_URL}/chat/client-message`, {
         method: "POST",
         headers: {

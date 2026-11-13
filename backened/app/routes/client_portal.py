@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Header
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr
 from jose import jwt, JWTError
@@ -154,9 +155,9 @@ def client_login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    # Same email wale saare clients dhundo
+    # All clients sharing this email; matched case-insensitively and ignoring surrounding spaces
     clients = db.query(Client).filter(
-        Client.email == form_data.username,
+        func.lower(Client.email) == form_data.username.strip().lower(),
         Client.password_hash != None
     ).all()
 

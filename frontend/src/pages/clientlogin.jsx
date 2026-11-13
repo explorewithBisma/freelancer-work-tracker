@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import api from "../api/axios";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import portalApi from "../api/portalAxios";
+import { getClientToken, setClientToken } from "../auth/clientSession";
 import "./auth.css";
 
 export default function ClientLogin() {
@@ -11,6 +12,9 @@ export default function ClientLogin() {
   const [error, setError]         = useState("");
   const [loading, setLoading]     = useState(false);
 
+  // Already signed in as a client: go straight to the portal (freelancer session is irrelevant here)
+  if (getClientToken()) return <Navigate to="/client-portal" replace />;
+
   const onSubmit = async (e) => {
     e.preventDefault();
     setError(""); setLoading(true);
@@ -18,11 +22,11 @@ export default function ClientLogin() {
       const form = new URLSearchParams();
       form.append("username", email);
       form.append("password", password);
-      const res = await api.post("/client-portal/login", form, {
+      const res = await portalApi.post("/client-portal/login", form, {
         headers: { "Content-Type": "application/x-www-form-urlencoded" }
       });
-      localStorage.setItem("client_token", res.data.access_token);
-      navigate("/client-portal");
+      setClientToken(res.data.access_token);
+      navigate("/client-portal", { replace: true });
     } catch (err) {
       setError(err.response?.status === 401
         ? "Incorrect email or password."

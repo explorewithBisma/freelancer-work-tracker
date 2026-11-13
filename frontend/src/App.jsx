@@ -5,6 +5,7 @@ import Register from "./pages/Register";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import TempRoute from "./auth/TempRoute";
+import ClientRoute from "./auth/ClientRoute";
 import ForgotPassword from "./pages/ForgotPassword";
 import Projects from "./pages/Projects";
 import Tasks from "./pages/Tasks";
@@ -33,7 +34,7 @@ export default function App() {
         {/* Client Portal */}
         <Route path="/client-login"  element={<ClientLogin />} />
         <Route path="/client-set-password" element={<ClientSetPassword />} />
-        <Route path="/client-portal" element={<ClientPortal />} />
+        <Route path="/client-portal" element={<ClientRoute><ClientPortal /></ClientRoute>} />
 
         {/* Protected Routes */}
         <Route path="/dashboard"      element={<TempRoute><Dashboard /></TempRoute>} />
