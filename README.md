@@ -25,19 +25,21 @@ Full stack (FastAPI + React + Groq AI) designed and built independently.
 
 The demo data **resets every day**, so feel free to click around, add and delete things. A few things are switched off in the demo on purpose: changing the password or email, and sending emails. The AI assistant is limited to 30 messages per day in the demo.
 
-<!--
 ## Screenshots
 
-Add images to docs/screenshots/ and uncomment this section, e.g.:
+*Captured from the live demo.*
 
 | Dashboard | Projects |
 |---|---|
-| ![Dashboard](docs/screenshots/dashboard.png) | ![Projects](docs/screenshots/projects.png) |
-| Kanban tasks | Invoice preview |
-| ![Tasks](docs/screenshots/tasks.png) | ![Invoice](docs/screenshots/invoice.png) |
-| Client portal | AI assistant |
-| ![Client portal](docs/screenshots/client-portal.png) | ![AI assistant](docs/screenshots/ai-assistant.png) |
--->
+| ![Dashboard with weekly goal, activity chart and pending invoices](docs/screenshots/dashboard.png) | ![Projects with status filters](docs/screenshots/projects.png) |
+
+| Kanban tasks | Invoices |
+|---|---|
+| ![Kanban task board with To Do, In Progress and Completed columns](docs/screenshots/tasks.png) | ![Invoices with draft, sent and paid status](docs/screenshots/invoice.png) |
+
+| AI assistant | Client portal |
+|---|---|
+| ![AI assistant answering a question about pending tasks](docs/screenshots/ai-assistant.png) | ![Client portal with projects, progress and invoices](docs/screenshots/client-portal.png) |
 
 ---
 
