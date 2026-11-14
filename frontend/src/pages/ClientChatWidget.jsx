@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/chatwidget.css";
 import { API_BASE_URL } from "../api/config";
-import { getClientToken } from "../auth/clientSession";
+import { getClientToken, clearClientToken } from "../auth/clientSession";
 
 const BotIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -95,6 +95,12 @@ export default function ClientChatWidget({ clientData }) {
         body: JSON.stringify({ message: enrichedMessage, context: clientContext })
       });
 
+      if (res.status === 401 || res.status === 403) {
+        // The chat endpoint requires a valid client session
+        clearClientToken();
+        setMessages(prev => [...prev, { from: "bot", text: "Your session has expired. Please sign in again to keep chatting." }]);
+        return;
+      }
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
       setMessages(prev => [...prev, { from: "bot", text: data.reply }]);

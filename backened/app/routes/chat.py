@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -9,10 +9,10 @@ from groq import Groq
 import os
 
 from app.dependencies import get_db, get_current_user
-from app.config import settings
-from app.demo import is_demo_user, CHAT_LIMIT_MESSAGE
-from app.services.demo_chat import consume_demo_chat
-from jose import jwt, JWTError
+from app.demo import is_demo_user
+from app.services import chat_quota
+from app.routes.client_portal import get_current_client
+from app.models.user import User
 from app.models.project import Project
 from app.models.task import Task
 from app.models.time_entry import TimeEntry
@@ -37,6 +37,10 @@ def get_groq_client() -> Groq:
 
 
 MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+
+
+LANDING_MAX_CHARS = 500
+CLIENT_MAX_CHARS = 8000   # the portal widget embeds the client's project context in the message
 
 
 class ChatRequest(BaseModel):
@@ -84,31 +88,16 @@ def build_freelancer_context(db, user_id):
     return ctx
 
 
-def _demo_owner_of_client_token(db: Session, authorization: Optional[str]):
-    """If the request carries a valid client-portal token of a client that belongs to the
-    demo freelancer, return the demo user's id (so the demo's daily chat cap applies).
-    Any other / missing / invalid token: None (behaviour unchanged for everyone else)."""
-    if not authorization or not authorization.lower().startswith("bearer "):
-        return None
-    try:
-        claims = jwt.decode(authorization[7:].strip(), settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        if claims.get("role") != "client" or claims.get("purpose") != "client_portal":
-            return None
-        client = db.query(Client).filter(Client.id == int(claims.get("sub"))).first()
-    except (JWTError, TypeError, ValueError):
-        return None
-    if not client:
-        return None
-    from app.models.user import User
-    owner = db.query(User).filter(User.id == client.user_id).first()
-    return owner.id if is_demo_user(owner) else None
-
-
 @router.post("/message")
 def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     groq_client = get_groq_client()
-    if is_demo_user(current_user) and not consume_demo_chat(db, current_user.id):
-        return {"reply": CHAT_LIMIT_MESSAGE}
+    denied = chat_quota.admit(
+        db,
+        [(chat_quota.USER, str(current_user.id), chat_quota.user_cap())],
+        demo_user_id=current_user.id if is_demo_user(current_user) else None,
+    )
+    if denied:
+        return {"reply": denied}
     try:
         context = build_freelancer_context(db, current_user.id)
         response = groq_client.chat.completions.create(
@@ -127,11 +116,22 @@ def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_us
 
 
 @router.post("/client-message")
-def client_chat_message(payload: ClientChatRequest, db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
+def client_chat_message(payload: ClientChatRequest, db: Session = Depends(get_db),
+                        current_client: Client = Depends(get_current_client)):
+    # Requires a valid client-portal token (get_current_client): reset / set-password /
+    # freelancer tokens and anonymous callers are rejected with 401/403 before Groq is touched.
     groq_client = get_groq_client()
-    demo_owner_id = _demo_owner_of_client_token(db, authorization)
-    if demo_owner_id and not consume_demo_chat(db, demo_owner_id):
-        return {"reply": CHAT_LIMIT_MESSAGE}
+    if len(payload.message) > CLIENT_MAX_CHARS:
+        return {"reply": "That message is too long. Please ask a shorter question."}
+    owner = db.query(User).filter(User.id == current_client.user_id).first()
+    # The demo client shares the demo freelancer's daily cap; everyone else gets a per-client cap.
+    denied = chat_quota.admit(
+        db,
+        [] if is_demo_user(owner) else [(chat_quota.CLIENT, str(current_client.id), chat_quota.client_cap())],
+        demo_user_id=owner.id if is_demo_user(owner) else None,
+    )
+    if denied:
+        return {"reply": denied}
     try:
         user_question = payload.message.split("[USER QUESTION]")[-1].strip() if "[USER QUESTION]" in payload.message else payload.message
         response = groq_client.chat.completions.create(
@@ -150,13 +150,28 @@ def client_chat_message(payload: ClientChatRequest, db: Session = Depends(get_db
 
 
 @router.post("/landing-message")
-async def landing_chat(request: Request):
+async def landing_chat(request: Request, db: Session = Depends(get_db)):
     groq_client = get_groq_client()
     try:
         body = await request.json()
-        user_message = body.get("message", "")
-        if not user_message:
-            return JSONResponse({"reply": "Please ask me something!"})
+    except Exception:
+        body = {}
+    user_message = body.get("message", "") if isinstance(body, dict) else ""
+    if not isinstance(user_message, str) or not user_message.strip():
+        return JSONResponse({"reply": "Please ask me something!"})
+    if len(user_message) > LANDING_MAX_CHARS:
+        return JSONResponse({"reply": f"Please keep your question under {LANDING_MAX_CHARS} characters."})
+
+    # Public endpoint: per-IP daily limit + global daily cap (counted in the database).
+    # Nothing is counted, and Groq is not called, once a limit is hit.
+    denied = chat_quota.admit(db, [
+        (chat_quota.LANDING_IP, chat_quota.ip_subject(chat_quota.client_ip(request)), chat_quota.landing_ip_cap()),
+        (chat_quota.LANDING_GLOBAL, "all", chat_quota.landing_global_cap()),
+    ])
+    if denied:
+        return JSONResponse({"reply": denied})
+
+    try:
         response = groq_client.chat.completions.create(
             model=MODEL,
             messages=[

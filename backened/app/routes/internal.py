@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.dependencies import get_db
 from app.services.demo_seed import seed_demo
+from app.services.chat_quota import purge_old_usage
 
 router = APIRouter(prefix="/internal", tags=["Internal"], include_in_schema=False)
 
@@ -20,4 +21,5 @@ def demo_reset(authorization: str = Header(None), db: Session = Depends(get_db))
         raise HTTPException(status_code=401, detail="Missing authorization")
     if not hmac.compare_digest(authorization.encode(), f"Bearer {secret}".encode()):
         raise HTTPException(status_code=403, detail="Forbidden")
-    return {"status": "ok", "seeded": seed_demo(db)}
+    seeded = seed_demo(db)
+    return {"status": "ok", "seeded": seeded, "purged_usage_rows": purge_old_usage(db)}

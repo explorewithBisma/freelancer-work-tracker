@@ -18,6 +18,7 @@ from app.routes.chat import router as chat_router
 from app.routes import settings
 from app.routes.internal import router as internal_router
 import app.models.demo_usage  # noqa: F401  (registers the demo_chat_usage table)
+import app.models.chat_usage  # noqa: F401  (registers the chat_usage table)
 
 # --- LOGGING ---
 logging.basicConfig(

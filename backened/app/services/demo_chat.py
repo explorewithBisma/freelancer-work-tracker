@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.demo import CHAT_DAILY_CAP
 
 
-def consume_demo_chat(db: Session, user_id: int, cap: int = CHAT_DAILY_CAP) -> bool:
+def consume_demo_chat(db: Session, user_id: int, cap: int = CHAT_DAILY_CAP, commit: bool = True) -> bool:
     """Atomically count one demo chat message for today (UTC).
 
     Returns True if the message is allowed, False if the daily cap is reached.
@@ -27,5 +27,6 @@ def consume_demo_chat(db: Session, user_id: int, cap: int = CHAT_DAILY_CAP) -> b
         ),
         {"u": user_id, "d": today, "cap": cap},
     ).first()
-    db.commit()
+    if commit:
+        db.commit()
     return row is not None
