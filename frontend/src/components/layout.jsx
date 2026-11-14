@@ -78,6 +78,10 @@ export default function Layout() {
         </div>
       </header>}
 
+      {isAuth && user?.is_demo && !isClientArea && (
+        <div className="demo-banner" role="status">🎭 You're using a demo account — data resets daily.</div>
+      )}
+
       <div className="app-container">
 
         {/* SIDEBAR */}

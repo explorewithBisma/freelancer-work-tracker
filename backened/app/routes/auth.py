@@ -17,6 +17,7 @@ from app.services.auth_service import verify_password, create_access_token, hash
 from app.services.email_service import send_reset_email
 from app.config import settings
 from app.models.user import User
+from app.demo import is_demo_email, is_demo_user
 
 logger = logging.getLogger("app.auth")
 router = APIRouter(tags=["Auth"])
@@ -50,6 +51,8 @@ def _create_reset_token(user: User) -> str:
 
 @router.post("/register", response_model=UserOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, db: Session = Depends(get_db)):
+    if is_demo_email(payload.email):
+        raise HTTPException(status_code=409, detail="This email address is reserved for the demo account.")
     existing = get_user_by_email(db, payload.email)
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
@@ -64,6 +67,17 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(status_code=401, detail="Invalid credentials")
     token = create_access_token({"sub": str(user.id)})
     return {"access_token": token, "token_type": "bearer"}
+
+
+@router.post("/demo-login", response_model=Token)
+def demo_login(db: Session = Depends(get_db)):
+    """One-click login for the public demo. Returns a token for the demo user ONLY;
+    the demo account has no usable password."""
+    from app.demo import demo_user_email
+    user = get_user_by_email(db, demo_user_email())
+    if not user:
+        raise HTTPException(status_code=404, detail="The demo is not available right now.")
+    return {"access_token": create_access_token({"sub": str(user.id)}), "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserOut)
@@ -84,6 +98,8 @@ def get_me(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
 @router.post("/forgot-password", status_code=200)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     generic = {"message": "If this email is registered, a reset link has been sent."}
+    if is_demo_email(payload.email):
+        return generic  # demo account: nothing is sent, no token is issued
     user = get_user_by_email(db, payload.email)
     if not user:
         return generic
@@ -107,7 +123,7 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
         user = get_user_by_id(db, int(claims.get("sub")))
     except (TypeError, ValueError):
         raise invalid
-    if not user or claims.get("pwd") != user.password_hash[-10:]:
+    if not user or is_demo_user(user) or claims.get("pwd") != user.password_hash[-10:]:
         raise invalid
     user.password_hash = hash_password(payload.new_password)
     db.commit()

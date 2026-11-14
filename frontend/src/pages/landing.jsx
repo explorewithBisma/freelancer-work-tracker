@@ -5,6 +5,7 @@ import { Link } from "react-router-dom";
 import LandingChatWidget from "./LandingChatWidget";
 import Lottie from "lottie-react";
 import heroAnim from "../assets/lottie/hero.json";
+import DemoLoginButton from "../components/DemoLoginButton";
 import whyAnim from "../assets/lottie/why.json";
 
 
@@ -36,6 +37,7 @@ export default function Landing() {
           <div className="lp-cta">
             <Link className="lp-btn" to="/register">Get Started</Link>
             <Link className="lp-btn-ghost" to="/login">Login</Link>
+            <DemoLoginButton className="lp-btn-ghost lp-btn-demo">Try the demo</DemoLoginButton>
           </div>
         </div>
         <div className="lp-hero-right">

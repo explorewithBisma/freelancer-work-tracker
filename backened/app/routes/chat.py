@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
@@ -9,6 +9,10 @@ from groq import Groq
 import os
 
 from app.dependencies import get_db, get_current_user
+from app.config import settings
+from app.demo import is_demo_user, CHAT_LIMIT_MESSAGE
+from app.services.demo_chat import consume_demo_chat
+from jose import jwt, JWTError
 from app.models.project import Project
 from app.models.task import Task
 from app.models.time_entry import TimeEntry
@@ -80,9 +84,31 @@ def build_freelancer_context(db, user_id):
     return ctx
 
 
+def _demo_owner_of_client_token(db: Session, authorization: Optional[str]):
+    """If the request carries a valid client-portal token of a client that belongs to the
+    demo freelancer, return the demo user's id (so the demo's daily chat cap applies).
+    Any other / missing / invalid token: None (behaviour unchanged for everyone else)."""
+    if not authorization or not authorization.lower().startswith("bearer "):
+        return None
+    try:
+        claims = jwt.decode(authorization[7:].strip(), settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        if claims.get("role") != "client" or claims.get("purpose") != "client_portal":
+            return None
+        client = db.query(Client).filter(Client.id == int(claims.get("sub"))).first()
+    except (JWTError, TypeError, ValueError):
+        return None
+    if not client:
+        return None
+    from app.models.user import User
+    owner = db.query(User).filter(User.id == client.user_id).first()
+    return owner.id if is_demo_user(owner) else None
+
+
 @router.post("/message")
 def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_user = Depends(get_current_user)):
     groq_client = get_groq_client()
+    if is_demo_user(current_user) and not consume_demo_chat(db, current_user.id):
+        return {"reply": CHAT_LIMIT_MESSAGE}
     try:
         context = build_freelancer_context(db, current_user.id)
         response = groq_client.chat.completions.create(
@@ -101,8 +127,11 @@ def chat_message(payload: ChatRequest, db: Session = Depends(get_db), current_us
 
 
 @router.post("/client-message")
-def client_chat_message(payload: ClientChatRequest):
+def client_chat_message(payload: ClientChatRequest, db: Session = Depends(get_db), authorization: Optional[str] = Header(None)):
     groq_client = get_groq_client()
+    demo_owner_id = _demo_owner_of_client_token(db, authorization)
+    if demo_owner_id and not consume_demo_chat(db, demo_owner_id):
+        return {"reply": CHAT_LIMIT_MESSAGE}
     try:
         user_question = payload.message.split("[USER QUESTION]")[-1].strip() if "[USER QUESTION]" in payload.message else payload.message
         response = groq_client.chat.completions.create(

@@ -14,6 +14,7 @@ class UserOut(BaseModel):
     full_name: str
     email: EmailStr
     created_at: Optional[datetime] = None
+    is_demo: bool = False
 
     #  Pydantic v1 syntax — ConfigDict(from_attributes=True) Pydantic v2 ka tha
     class Config:

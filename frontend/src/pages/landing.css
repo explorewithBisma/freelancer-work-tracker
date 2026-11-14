@@ -462,3 +462,6 @@
   .lp-section-sub { font-size: 13.5px; }
   .lp-card { padding: 18px 16px; }
 }
+/* "Try the demo" is a <button>: match the link-styled ghost buttons */
+button.lp-btn-ghost { font: inherit; cursor: pointer; }
+button.lp-btn-ghost:disabled { opacity: 0.7; cursor: default; }

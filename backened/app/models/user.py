@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime, Text, func
 from app.database import Base
+from app.demo import is_demo_email
 
 class User(Base):
     __tablename__ = "users"
@@ -11,3 +12,7 @@ class User(Base):
     bio           = Column(Text,        nullable=True)   
     password_hash = Column(String(255), nullable=False)
     created_at    = Column(DateTime, server_default=func.now())
+
+    @property
+    def is_demo(self) -> bool:
+        return is_demo_email(self.email)

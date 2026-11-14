@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.dependencies import get_db, get_current_user
+from app.demo import block_demo
 from app.schemas.settings_schema import (
     ProfileUpdate, ProfileOut,
     PasswordChange,
@@ -26,6 +27,8 @@ def read_profile(db: Session = Depends(get_db), current_user=Depends(get_current
 
 @router.patch("/profile", response_model=ProfileOut)
 def edit_profile(payload: ProfileUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    if payload.email and payload.email.lower() != current_user.email.lower():
+        block_demo(current_user, "Changing the email address is disabled in the demo.")
     updated = update_profile(db, current_user.id, payload.dict(exclude_none=True))
     if not updated:
         raise HTTPException(status_code=404, detail="User not found")
@@ -34,6 +37,7 @@ def edit_profile(payload: ProfileUpdate, db: Session = Depends(get_db), current_
 
 @router.post("/change-password")
 def update_password(payload: PasswordChange, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
+    block_demo(current_user, "Changing the password is disabled in the demo.")
     result = change_password(db, current_user.id, payload.current_password, payload.new_password, payload.confirm_password)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
@@ -48,3 +52,8 @@ def read_settings(db: Session = Depends(get_db), current_user=Depends(get_curren
 @router.patch("/preferences", response_model=SettingsOut)
 def edit_settings(payload: SettingsUpdate, db: Session = Depends(get_db), current_user=Depends(get_current_user)):
     return update_settings(db, current_user.id, payload.dict(exclude_none=True))
+
+
+# Reserved: the demo account can never be deleted. Any future delete-account
+# endpoint must start with:
+#     block_demo(current_user, "Deleting the account is disabled in the demo.")

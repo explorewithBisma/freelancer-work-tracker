@@ -15,6 +15,8 @@ from app.models.time_entry import TimeEntry
 from app.models.invoice import Invoice
 from app.services.auth_service import verify_password, hash_password
 from app.config import settings
+from app.demo import demo_user_email, demo_client_email, is_demo_client_email
+from app.models.user import User
 
 router = APIRouter(tags=["Client Portal"])
 
@@ -92,7 +94,7 @@ def set_password_with_token(payload: ClientSetPasswordWithToken, db: Session = D
         client = db.query(Client).filter(Client.id == int(claims.get("sub"))).first()
     except (TypeError, ValueError):
         raise invalid
-    if not client or claims.get("pwd") != _pwd_marker(client):
+    if not client or is_demo_client_email(client.email) or claims.get("pwd") != _pwd_marker(client):
         raise invalid
 
     client.password_hash = hash_password(payload.password)
@@ -130,6 +132,23 @@ def client_login(
 
     token = create_client_token(matched_client.id)
     return {"access_token": token, "token_type": "bearer"}
+
+
+# ════════════════════════════════
+# DEMO LOGIN — token for the demo client ONLY (no password exists for it)
+# ════════════════════════════════
+@router.post("/demo-login", response_model=ClientToken)
+def client_demo_login(db: Session = Depends(get_db)):
+    demo_user = db.query(User).filter(func.lower(User.email) == demo_user_email()).first()
+    client = None
+    if demo_user:
+        client = db.query(Client).filter(
+            Client.user_id == demo_user.id,
+            func.lower(Client.email) == demo_client_email(),
+        ).first()
+    if not client:
+        raise HTTPException(status_code=404, detail="The client demo is not available right now.")
+    return {"access_token": create_client_token(client.id), "token_type": "bearer"}
 
 
 # ════════════════════════════════

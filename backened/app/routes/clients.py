@@ -9,6 +9,7 @@ from app.dependencies import get_db, get_current_user
 from app.schemas.client import ClientCreate, ClientOut
 from app.services.client_service import create_client, get_clients, get_client, delete_client
 from app.models.client import Client
+from app.demo import is_demo_user, EMAIL_DISABLED_MESSAGE
 from app.routes.client_portal import create_set_password_token
 from app.services.email_service import send_client_portal_email, frontend_url
 
@@ -106,6 +107,10 @@ def invite_client_to_portal(
         raise HTTPException(status_code=404, detail="Client not found")
     if not client.email:
         raise HTTPException(status_code=400, detail="This client has no email address. Add one first.")
+
+    if is_demo_user(current_user):
+        # Demo: never contact Brevo, never issue a token.
+        return {"message": EMAIL_DISABLED_MESSAGE, "email_sent": False, "demo": True}
 
     token = create_set_password_token(client)
     set_password_url = f"{frontend_url()}/client-set-password?token={token}"

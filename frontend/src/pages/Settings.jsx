@@ -58,7 +58,7 @@ export default function Settings() {
         bio:       profile.bio,
       });
       showSaved("Profile");
-    } catch { showError("Failed to save profile."); }
+    } catch (err) { showError(err?.response?.data?.detail || "Failed to save profile."); }
   };
 
   const handleSavePassword = async () => {

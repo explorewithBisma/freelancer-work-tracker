@@ -297,3 +297,13 @@ body {
   .sidebar-label { font-size: 8px; }
   .page { padding: 12px; padding-bottom: 85px; }
 }
+/* Demo account banner */
+.demo-banner {
+  background: #fff7e6;
+  border-bottom: 1px solid #fde1a8;
+  color: #8a5a00;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+}

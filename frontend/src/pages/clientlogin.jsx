@@ -11,9 +11,21 @@ export default function ClientLogin() {
   const [showPwd, setShowPwd]     = useState(false);
   const [error, setError]         = useState("");
   const [loading, setLoading]     = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
 
   // Already signed in as a client: go straight to the portal (freelancer session is irrelevant here)
   if (getClientToken()) return <Navigate to="/client-portal" replace />;
+
+  const tryClientDemo = async () => {
+    setError(""); setDemoLoading(true);
+    try {
+      const res = await portalApi.post("/client-portal/demo-login");
+      setClientToken(res.data.access_token);
+      navigate("/client-portal", { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.detail || "The client demo is unavailable right now. Please try again later.");
+    } finally { setDemoLoading(false); }
+  };
 
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -75,6 +87,10 @@ export default function ClientLogin() {
         </form>
 
         <div className="auth-divider"><span>or</span></div>
+        <button type="button" className="auth-submit" onClick={tryClientDemo} disabled={demoLoading}
+          style={{ background: "linear-gradient(90deg,#1d7874,#2a9d8f)", opacity: demoLoading ? 0.7 : 1, marginBottom: 14 }}>
+          {demoLoading ? "Opening demo..." : "Try the client demo →"}
+        </button>
         <div className="auth-footer">
           <Link to="/login" className="auth-link-small">← Freelancer Login</Link>
         </div>

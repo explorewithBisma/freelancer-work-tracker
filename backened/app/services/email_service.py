@@ -4,6 +4,8 @@ import os
 
 import httpx
 
+from app.demo import is_demo_domain
+
 logger = logging.getLogger("app.email")
 
 BREVO_URL = "https://api.brevo.com/v3/smtp/email"
@@ -17,6 +19,9 @@ def frontend_url() -> str:
 
 def _send_email(to_email: str, subject: str, html: str) -> bool:
     """Send via Brevo's HTTP API. Never raises; returns True on success."""
+    if is_demo_domain(to_email):
+        logger.info("Email to demo address %s skipped", to_email)
+        return False
     api_key = os.getenv("BREVO_API_KEY")
     mail_from = os.getenv("MAIL_FROM")
     if not api_key or not mail_from:

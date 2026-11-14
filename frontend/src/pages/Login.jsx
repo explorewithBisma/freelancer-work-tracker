@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import "./auth.css";
 import api from "../api/axios";
 import { useAuth } from "../auth/AuthContext";
+import DemoLoginButton from "../components/DemoLoginButton";
 
 export default function Login() {
   const navigate  = useNavigate();
@@ -151,6 +152,8 @@ export default function Login() {
         </form>
 
         <div className="auth-divider"><span>or</span></div>
+
+        <DemoLoginButton className="auth-submit" >Try the demo — no sign-up needed →</DemoLoginButton>
 
         <div className="auth-footer">
           <span>Don't have an account?</span>

@@ -16,6 +16,8 @@ from app.routes.clients import router as clients_router
 from app.routes import projects, tasks, time_entries, invoices, conversations, messages, dashboard
 from app.routes.chat import router as chat_router
 from app.routes import settings
+from app.routes.internal import router as internal_router
+import app.models.demo_usage  # noqa: F401  (registers the demo_chat_usage table)
 
 # --- LOGGING ---
 logging.basicConfig(
@@ -111,3 +113,4 @@ app.include_router(chat_router,          prefix="/chat",           tags=["Chatbo
 app.include_router(messages.router,      prefix="/messages",       tags=["Messages"])
 app.include_router(dashboard.router,     prefix="/dashboard",      tags=["Dashboard"])
 app.include_router(settings.router)
+app.include_router(internal_router)
