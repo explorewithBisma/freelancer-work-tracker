@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { API_BASE_URL } from "../api/config";
+import ChatMarkdown from "../components/ChatMarkdown";
 
 const BotIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -97,9 +98,7 @@ export default function LandingChatWidget() {
                   </div>
                 )}
                 <div style={{ maxWidth: "75%", padding: "9px 13px", borderRadius: 14, fontSize: 12.5, lineHeight: 1.55, background: m.from === "bot" ? "white" : "linear-gradient(135deg, #7c3aed, #ec4899)", color: m.from === "bot" ? "#1a1040" : "white", boxShadow: m.from === "bot" ? "0 2px 8px rgba(0,0,0,0.06)" : "none", borderBottomLeftRadius: m.from === "bot" ? 4 : 14, borderBottomRightRadius: m.from === "user" ? 4 : 14 }}>
-                  {m.text.split("\n").map((line, j) => (
-                    <span key={j}>{line}{j < m.text.split("\n").length - 1 && <br/>}</span>
-                  ))}
+                  <ChatMarkdown text={m.text} plain={m.from !== "bot"} />
                 </div>
               </div>
             ))}

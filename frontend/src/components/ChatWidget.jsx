@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import api from "../api/axios";
 import "./chatwidget.css";
+import ChatMarkdown from "./ChatMarkdown";
 
 const BotIcon = () => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -95,9 +96,7 @@ export default function ChatWidget() {
               <div key={i} className={`cw-msg ${m.from}`}>
                 {m.from === "bot" && <div className="cw-msg-avatar"><BotIcon /></div>}
                 <div className="cw-msg-bubble">
-                  {m.text.split("\n").map((line, j) => (
-                    <span key={j}>{line}{j < m.text.split("\n").length - 1 && <br/>}</span>
-                  ))}
+                  <ChatMarkdown text={m.text} plain={m.from !== "bot"} />
                 </div>
               </div>
             ))}

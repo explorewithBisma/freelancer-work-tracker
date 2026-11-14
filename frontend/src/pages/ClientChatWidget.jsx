@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import "../components/chatwidget.css";
+import ChatMarkdown from "../components/ChatMarkdown";
 import { API_BASE_URL } from "../api/config";
 import { getClientToken, clearClientToken } from "../auth/clientSession";
 
@@ -169,9 +170,7 @@ export default function ClientChatWidget({ clientData }) {
                   </div>
                 )}
                 <div className="cw-msg-bubble">
-                  {m.text.split("\n").map((line, j) => (
-                    <span key={j}>{line}{j < m.text.split("\n").length - 1 && <br/>}</span>
-                  ))}
+                  <ChatMarkdown text={m.text} plain={m.from !== "bot"} />
                 </div>
               </div>
             ))}
